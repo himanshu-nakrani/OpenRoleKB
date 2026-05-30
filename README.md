@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpenRoleKB
 
-## Getting Started
+AI-powered job search in plain English. Type a sentence about the role you want and get relevant, live job postings ranked by an LLM.
 
-First, run the development server:
+## How it works
+
+1. **Parse** — DeepSeek extracts structured filters from your natural language query (role, seniority, skills, location, remote, exclusions)
+2. **Search** — Exa's neural web search finds job postings across greenhouse.io, lever.co, ashbyhq.com, and other ATS hosts
+3. **Rerank** — DeepSeek scores all 25 results against your exact constraints; results below 40% match are filtered out
+4. **Stream** — Results appear incrementally via Server-Sent Events as they arrive
+
+Searches are cached in Postgres for 6 hours. Saved searches persist by anonymous browser ID — no account needed.
+
+## Stack
+
+- **Framework**: Next.js 16 (App Router, TypeScript, Tailwind CSS)
+- **Search**: Exa neural search API
+- **LLM**: DeepSeek (OpenAI-compatible function calling)
+- **Database**: Neon Postgres via Prisma 7
+- **Fonts**: Fraunces (display), Geist Sans, Geist Mono
+
+## Setup
+
+```bash
+npm install
+cp .env.example .env
+```
+
+Fill in `.env`:
+
+```
+EXA_API_KEY=your-exa-key
+DEEPSEEK_API_KEY=your-deepseek-key
+DATABASE_URL=postgresql://...   # pooled connection string (runtime)
+DIRECT_URL=postgresql://...     # direct connection (migrations)
+```
+
+Create the database tables:
+
+```bash
+npx prisma db push
+```
+
+## Running
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Testing Exa
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx tsx scripts/test-exa.ts "senior react engineer remote"
+```
 
-## Learn More
+## Testing the query parser
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npx tsx scripts/test-parse.ts
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+  app/
+    api/search/route.ts      # POST — SSE streaming pipeline
+    api/saved/route.ts       # GET/POST/DELETE saved searches
+    search/[id]/page.tsx     # Permalink to cached search results
+  components/
+    SearchBox.tsx             # Pill ask bar, We heard row, save button
+    ResultsList.tsx           # Virtual-scroll list with keyboard nav
+    ResultRow.tsx             # Compact result card
+    DetailPane.tsx            # Job description detail view
+    DetailSheet.tsx           # Mobile dialog wrapper
+    ThemeToggle.tsx           # System/light/dark cycle
+    SavedSearches.tsx         # Horizontal pill strip
+    ScoreChip.tsx             # Tiered match % badge
+    Skeleton.tsx              # Shimmer placeholder
+    MascotSvg.tsx             # Line-art illustration
+  lib/
+    exa.ts                    # Exa client, ATS domain allowlist
+    llm.ts                    # DeepSeek client (OpenAI SDK)
+    parse-query.ts            # NL → structured filters
+    rerank.ts                 # LLM rerank pass
+    cache.ts                  # Prisma cache helpers
+    company.ts                # Company name extraction from ATS URLs
+    hash.ts                   # Query normalization + SHA-256
+    prisma.ts                 # Singleton PrismaClient
+    rate-limit.ts             # In-memory token bucket
+prisma/
+  schema.prisma               # Job, SearchCache, SavedSearch
+  migrations/
+```
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
