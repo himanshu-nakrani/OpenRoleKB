@@ -1,0 +1,42 @@
+export interface Filters {
+  role?: string;
+  seniority?: string;
+  skills?: string[];
+  location?: string;
+  remote?: boolean;
+  salaryMin?: number;
+  exclude?: string[];
+  freshnessDays?: number;
+}
+
+export interface ExaResult {
+  id: string;
+  title: string;
+  url: string;
+  text: string;
+  highlights: string[];
+  publishedDate?: string;
+  author?: string;
+}
+
+export interface RerankItem {
+  idx: number;
+  score: number;
+  fit: string;
+}
+
+export interface ParsedQuery {
+  filters: Filters;
+  rawQuery: string;
+}
+
+export interface SearchResponse {
+  filters: Filters;
+  exaResults: ExaResult[];
+  reranked: RerankItem[];
+}
+
+export interface SSEEvent {
+  event: "parsed" | "results" | "rerank" | "done" | "error";
+  data: unknown;
+}

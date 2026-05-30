@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  url         String   @unique
+  title       String
+  company     String?
+  location    String?
+  description String?
+  publishedAt DateTime?
+  source      String
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @updatedAt
+}
+
+model SearchCache {
+  id           String   @id @default(cuid())
+  queryHash    String   @unique
+  rawQuery     String
+  filters      Json
+  resultJobIds String[]
+  rerankScores Json
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model SavedSearch {
+  id        String   @id @default(cuid())
+  anonId    String
+  rawQuery  String
+  filters   Json
+  createdAt DateTime @default(now())
+
+  @@index([anonId])
+}

@@ -1,0 +1,25 @@
+export function MascotSvg({ className }: { className?: string }) {
+  return (
+    <svg
+      width="120"
+      height="100"
+      viewBox="0 0 120 100"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="30" y="15" width="60" height="70" rx="8" fill="var(--surface)" stroke="var(--border)" />
+      <line x1="38" y1="30" x2="82" y2="30" stroke="var(--ink)" strokeWidth="2" />
+      <line x1="38" y1="40" x2="72" y2="40" stroke="currentColor" />
+      <line x1="38" y1="50" x2="76" y2="50" stroke="currentColor" />
+      <line x1="38" y1="60" x2="68" y2="60" stroke="currentColor" />
+      <path d="M68 10V0l8 8h-8z" fill="var(--surface)" stroke="var(--border)" />
+      <rect x="8" y="35" width="16" height="24" rx="4" fill="var(--surface)" stroke="var(--border)" />
+      <circle cx="20" cy="5" r="5" fill="var(--surface)" stroke="var(--accent)" />
+      <path d="M20 5 Q20 12 16 16" stroke="var(--accent)" strokeDasharray="2 2" />
+    </svg>
+  );
+}
