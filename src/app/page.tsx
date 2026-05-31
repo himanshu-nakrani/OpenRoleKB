@@ -43,6 +43,16 @@ export default function Home() {
 
   return (
     <div ref={containerRef}>
+      {searchState.exaResults.length === 0 && searchState.phase !== "loading" && (
+        <div className="max-w-3xl mx-auto pt-12 pb-8 text-center animate-fade-in">
+          <h1 className="text-display font-display-opsz-display text-ink">
+            Find a role you&apos;ll love.
+          </h1>
+          <p className="mt-4 text-body text-ink-soft max-w-xl mx-auto">
+            Describe what you want in plain English. We&apos;ll do the searching.
+          </p>
+        </div>
+      )}
       <SearchBox onStateChange={handleStateChange} />
 
       <SavedSearches

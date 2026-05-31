@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { ScoreChip } from "@/components/ScoreChip";
+import { FeedbackModal } from "@/components/FeedbackModal";
 import { extractCompany } from "@/lib/company";
 import type { ExaResult, RerankItem } from "@/types/job";
 
@@ -12,6 +14,8 @@ interface DetailPaneProps {
 }
 
 export function DetailPane({ exaResults, reranked, selectedIdx }: DetailPaneProps) {
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+
   if (selectedIdx === null) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-ink-soft gap-4 py-16">
@@ -48,31 +52,39 @@ export function DetailPane({ exaResults, reranked, selectedIdx }: DetailPaneProp
     try { return new URL(job.url).hostname.replace("www.", ""); } catch { return null; }
   })();
 
+  const currentFilters = (() => {
+    try {
+      const el = document.querySelector<HTMLDivElement>('[data-filters]');
+      if (el?.dataset.filters) return JSON.parse(el.dataset.filters);
+    } catch {}
+    return null;
+  })();
+
   return (
     <div className="h-full overflow-y-auto">
-      <div className="sticky top-0 bg-surface/95 backdrop-blur-sm z-10 pb-3 border-b border-border mb-4">
-        <h2
-          className="text-display font-medium leading-tight"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
+      <div className="max-w-[65ch] mx-auto">
+      <div className="sticky top-0 bg-surface/95 backdrop-blur-sm z-10 pb-3 border-b border-border mb-6">
+        <h2 className="text-h2 font-medium leading-snug font-display-opsz-h2">
           {job.title}
         </h2>
-        <p className="text-small text-ink-soft mt-1">
-          {[extractCompany(job.url) || job.author, job.publishedDate ? `Posted ${relativeDate(job.publishedDate)}` : null]
+        <div className="flex flex-wrap items-center gap-2 text-small text-muted mt-2">
+          {[extractCompany(job.url) || job.author, job.publishedDate ? relativeDate(job.publishedDate) : null]
             .filter(Boolean)
-            .join(" · ")}
-        </p>
-        <div className="flex items-center gap-3 mt-3 flex-wrap">
+            .map((s, i) => (
+              <span key={i}>{s}{i === 0 && job.publishedDate ? " · " : ""}</span>
+            ))}
+        </div>
+        <div className="flex items-center gap-4 mt-4 flex-wrap">
           <a
             href={job.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-accent text-white text-small font-medium hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent-dark text-accent-text text-small font-medium hover:brightness-110 active:brightness-90 active:scale-[0.98] transition-all duration-120"
           >
             Apply on {domain || "site"} <ExternalLink size={14} strokeWidth={2} aria-hidden />
           </a>
           {job.score !== undefined && (
-            <span className="flex items-center gap-2 text-small text-ink-soft">
+            <span className="flex items-center gap-2 text-small text-muted">
               <ScoreChip score={job.score} />
               Matches your ask
             </span>
@@ -80,15 +92,34 @@ export function DetailPane({ exaResults, reranked, selectedIdx }: DetailPaneProp
         </div>
       </div>
 
-      <div className="prose prose-sm prose-stone dark:prose-invert max-w-none" style={{ maxWidth: "70ch" }}>
+      <div className="prose prose-sm prose-stone dark:prose-invert max-w-none text-[1.0625rem]">
         {renderDescription(job.text)}
       </div>
 
       {domain && (
-        <p className="text-micro text-ink-soft mt-8 pt-4 border-t border-border">
-          Source: {domain}
-        </p>
+        <div className="mt-8 pt-4 border-t border-border flex items-center justify-between">
+          <p className="text-micro text-muted">
+            Source: {domain}
+          </p>
+          <button
+            onClick={() => setFeedbackOpen(true)}
+            className="text-micro text-muted hover:text-accent transition-colors duration-120"
+          >
+            Tell us this match was off →
+          </button>
+        </div>
       )}
+
+      <FeedbackModal
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        jobId={job.id}
+        rawQuery={job.title}
+        filters={currentFilters}
+        rerankScore={job.score ?? null}
+        fit={job.fit ?? null}
+      />
+      </div>
     </div>
   );
 }
@@ -99,9 +130,9 @@ function relativeDate(dateStr: string): string {
   const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays === 0) return "today";
   if (diffDays === 1) return "1 day ago";
-  if (diffDays < 30) return `${diffDays} days ago`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-  return `${Math.floor(diffDays / 365)} years ago`;
+  if (diffDays < 30) return diffDays + " days ago";
+  if (diffDays < 365) return Math.floor(diffDays / 30) + " months ago";
+  return Math.floor(diffDays / 365) + " years ago";
 }
 
 function renderDescription(text?: string) {
@@ -130,7 +161,7 @@ function renderDescription(text?: string) {
     if (line.startsWith("## ")) {
       flushBullets();
       elements.push(
-        <h3 key={key++} className="text-h2 font-medium mt-6 mb-2 text-ink" style={{ fontFamily: "var(--font-sans)" }}>
+        <h3 key={key++} className="text-h2 font-medium mt-6 mb-2 text-ink font-sans">
           {line.replace(/^## /, "")}
         </h3>,
       );

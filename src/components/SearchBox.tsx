@@ -204,7 +204,7 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
           e.preventDefault();
           runSearch();
         }}
-        className="relative mb-3"
+        className="relative mb-4"
       >
         <div className="relative">
           <span className="absolute left-5 top-1/2 -translate-y-1/2 text-ink-soft pointer-events-none">
@@ -218,21 +218,21 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder={PLACEHOLDERS[placeholderIdx]}
-            className="w-full h-14 pl-12 pr-14 rounded-full border-[1.5px] border-border bg-surface text-ink placeholder:text-ink-soft/60 focus:outline-none focus:ring-2 focus:ring-accent/40 text-body"
+            className="w-full h-14 pl-12 pr-14 rounded-full border-[1.5px] border-border bg-surface text-ink placeholder:text-muted focus-visible:outline-none focus-visible:border-border-strong focus-visible:ring-1 focus-visible:ring-accent/30 focus-visible:shadow-card-hover text-body transition-all duration-120"
             disabled={state.phase === "loading"}
           />
           <button
             type="submit"
             disabled={state.phase === "loading" || !query.trim()}
             aria-label="Search"
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-accent text-white flex items-center justify-center hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-accent-dark text-accent-text flex items-center justify-center shadow-sm hover:brightness-115 active:brightness-90 disabled:opacity-30 disabled:bg-surface-3 disabled:hover:brightness-100 disabled:active:brightness-100 disabled:cursor-not-allowed transition-all duration-120"
           >
             <CornerDownLeft size={18} strokeWidth={2} aria-hidden />
           </button>
         </div>
         {state.phase === "loading" && (
           <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
-            <div className="h-full w-1/3 bg-gradient-to-r from-transparent via-surface-2/40 to-transparent animate-shimmer" />
+            <div className="h-full w-1/3 bg-gradient-to-r from-transparent via-accent-soft/50 to-transparent animate-shimmer" />
           </div>
         )}
       </form>
@@ -244,7 +244,10 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
           <button
             onClick={handleSave}
             disabled={saved}
-            className="px-4 py-1.5 text-micro rounded-full border border-border text-ink-soft hover:bg-surface-2 disabled:opacity-50 disabled:cursor-default transition-colors"
+            className={saved
+              ? "px-4 py-2 text-micro rounded-full border border-success/40 bg-success/10 text-success animate-pulse-success disabled:opacity-70 disabled:cursor-default transition-all duration-120"
+              : "px-4 py-2 text-micro rounded-full border border-border text-muted hover:text-ink-soft hover:border-border-strong hover:bg-surface-2 active:bg-surface-3 active:scale-[0.98] transition-all duration-120"
+            }
           >
             {saved ? "Saved ✓" : "Save this search"}
           </button>
@@ -252,12 +255,12 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
       )}
 
       {state.error && (
-        <div className="mt-4 p-4 border-l-[3px] border-l-danger bg-surface rounded-r-lg text-small text-ink-soft">
+        <div className="mt-4 p-4 border-l-[3px] border-l-danger bg-surface rounded-r-lg text-small text-ink-soft animate-fade-in">
           <p className="font-medium text-ink">Couldn&apos;t reach the search service.</p>
           <p className="mt-1">{state.error}</p>
           <button
             onClick={() => runSearch()}
-            className="mt-2 text-accent hover:underline text-small"
+            className="mt-2 text-accent hover:underline text-small transition-colors duration-120"
           >
             Try again
           </button>
@@ -288,13 +291,13 @@ function WeHeard({
   if (entries.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+    <div className="flex items-center gap-2 mb-4 flex-wrap">
       <span className="text-micro text-ink-soft mr-1">We heard:</span>
       {entries.map((e, i) => (
         <button
           key={i}
           onClick={() => onDrop(e.key as keyof Filters, e.label)}
-          className="group inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-2 text-micro text-ink-soft hover:bg-surface-2/80 transition-colors"
+          className="group inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-2 text-micro text-muted hover:text-ink-soft hover:bg-surface-3 transition-all duration-120"
         >
           {e.label}
           <X
@@ -352,13 +355,13 @@ function ExampleQueries() {
 
   return (
     <div className="mt-6 text-center">
-      <p className="text-micro text-ink-soft mb-3">Try:</p>
+      <p className="text-micro text-ink-soft mb-4">Try:</p>
       <div className="flex flex-wrap justify-center gap-2">
         {EXAMPLES.map((e) => (
           <button
             key={e.label}
             onClick={() => handleClick(e.query)}
-            className="px-4 py-1.5 text-small rounded-full border border-border text-ink-soft hover:bg-surface-2 hover:text-ink transition-colors"
+                      className="px-4 py-2 text-small rounded-full border border-border text-muted hover:text-ink-soft hover:border-border-strong hover:bg-surface-2 active:bg-surface-3 active:scale-[0.98] transition-all duration-120"
           >
             &ldquo;{e.label}&rdquo;
           </button>
