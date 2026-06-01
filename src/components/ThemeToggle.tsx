@@ -64,7 +64,7 @@ export function ThemeToggle() {
       onClick={cycle}
       aria-label={mounted ? labels[theme] : "Theme"}
       title={mounted ? labels[theme] : "Theme"}
-      className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-2 transition-colors duration-180"
+      className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-2 transition-colors duration-120"
     >
       {(() => {
         const Icon = mounted ? Icons[theme] : SunMoon;
