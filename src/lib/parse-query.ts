@@ -28,12 +28,36 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionFunctionTool[] = [
   },
 ];
 
-export async function parseQuery(rawQuery: string): Promise<{ filters: Filters; rawQuery: string }> {
+export function sanitizeFilters(raw: unknown): Filters {
+  if (raw === null || typeof raw !== "object") return {};
+  const f = raw as Record<string, unknown>;
+  const out: Filters = {};
+  if (typeof f.role === "string" && f.role.trim()) out.role = f.role.trim().slice(0, 200);
+  if (typeof f.seniority === "string") out.seniority = f.seniority.trim().slice(0, 50);
+  if (Array.isArray(f.skills)) out.skills = f.skills.filter((s): s is string => typeof s === "string").slice(0, 20);
+  if (typeof f.location === "string") out.location = f.location.trim().slice(0, 100);
+  if (typeof f.remote === "boolean") out.remote = f.remote;
+  if (typeof f.salaryMin === "number" && Number.isFinite(f.salaryMin) && f.salaryMin > 0) out.salaryMin = Math.floor(f.salaryMin);
+  if (Array.isArray(f.exclude)) out.exclude = f.exclude.filter((s): s is string => typeof s === "string").slice(0, 20);
+  if (typeof f.freshnessDays === "number" && Number.isFinite(f.freshnessDays) && f.freshnessDays > 0) {
+    out.freshnessDays = Math.min(Math.floor(f.freshnessDays), 365);
+  }
+  return out;
+}
+
+export async function parseQuery(
+  rawQuery: string,
+  signal?: AbortSignal,
+): Promise<{ filters: Filters; rawQuery: string; parseError?: string; tokens?: number }> {
   const llm = getLLM();
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);
+
+    const combinedSignal = signal
+      ? AbortSignal.any([signal, controller.signal])
+      : controller.signal;
 
     const response = await llm.chat.completions.create(
       {
@@ -51,19 +75,25 @@ export async function parseQuery(rawQuery: string): Promise<{ filters: Filters; 
         tools: TOOLS,
         tool_choice: { type: "function", function: { name: "extract_filters" } },
       },
-      { signal: controller.signal },
+      { signal: combinedSignal },
     );
 
     clearTimeout(timeout);
 
+    const tokens = response.usage?.total_tokens;
     const toolCall = response.choices[0]?.message?.tool_calls?.[0];
     if (toolCall?.type === "function" && toolCall.function.name === "extract_filters") {
-      const filters = JSON.parse(toolCall.function.arguments) as Filters;
-      return { filters, rawQuery };
+      const parsed = JSON.parse(toolCall.function.arguments);
+      const filters = sanitizeFilters(parsed);
+      return { filters, rawQuery, tokens };
     }
 
-    return { filters: { role: rawQuery }, rawQuery };
-  } catch {
-    return { filters: { role: rawQuery }, rawQuery };
+    return { filters: { role: rawQuery }, rawQuery, parseError: "No tool call in response", tokens };
+  } catch (err) {
+    return {
+      filters: { role: rawQuery },
+      rawQuery,
+      parseError: err instanceof Error ? err.message : String(err),
+    };
   }
 }

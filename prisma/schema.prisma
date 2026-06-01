@@ -8,16 +8,18 @@ datasource db {
 }
 
 model Job {
-  id          String   @id @default(cuid())
-  url         String   @unique
-  title       String
-  company     String?
-  location    String?
-  description String?
-  publishedAt DateTime?
-  source      String
-  firstSeenAt DateTime @default(now())
-  lastSeenAt  DateTime @updatedAt
+  id           String           @id @default(cuid())
+  url          String           @unique
+  title        String
+  company      String?
+  location     String?
+  isRemote     Boolean?
+  description  String?
+  publishedAt  DateTime?
+  source       String
+  firstSeenAt  DateTime         @default(now())
+  lastSeenAt   DateTime         @updatedAt
+  interactions JobInteraction[]
 }
 
 model SearchCache {
@@ -34,10 +36,152 @@ model SearchCache {
 
 model SavedSearch {
   id        String   @id @default(cuid())
-  anonId    String
+  anonId    String?
+  userId    String?
+  queryHash String
   rawQuery  String
   filters   Json
   createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([anonId])
+  @@index([userId])
+  @@unique([userId, queryHash])
+  @@unique([anonId, queryHash])
+}
+
+model JobInteraction {
+  id        String   @id @default(cuid())
+  ownerKey  String
+  jobId     String
+  kind      String
+  note      String?
+  createdAt DateTime @default(now())
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerKey, jobId, kind])
+  @@index([ownerKey, kind])
+}
+
+model HiddenCompany {
+  id        String   @id @default(cuid())
+  ownerKey  String
+  company   String
+  createdAt DateTime @default(now())
+
+  @@unique([ownerKey, company])
+  @@index([ownerKey])
+}
+
+model FeedbackEvent {
+  id          String   @id @default(cuid())
+  ownerKey    String
+  jobId       String
+  kind        String
+  rawQuery    String
+  filters     Json
+  rerankScore Float?
+  fit         String?
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@index([kind, createdAt])
+  @@index([ownerKey, createdAt])
+}
+
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  anonId        String?         @unique
+  createdAt     DateTime        @default(now())
+  accounts      Account[]
+  sessions      Session[]
+  savedSearches SavedSearch[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model TransferCode {
+  code      String   @id
+  anonId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model EvalRun {
+  id          String   @id @default(cuid())
+  runId       String
+  caseName    String
+  query       String
+  score       Float
+  passed      Boolean
+  failures    Json     @default("[]")
+  durationMs  Int
+  tokens      Int?
+  costUsd     Float?
+  rubric      String
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@index([runId])
+  @@index([createdAt])
+  @@index([passed, createdAt])
+}
+
+model EventLog {
+  id            String   @id @default(cuid())
+  evt           String
+  ownerKey      String?
+  cacheHit      Boolean  @default(false)
+  resultCount   Int
+  parseMs       Int
+  exaMs         Int
+  rerankMs      Int
+  totalMs       Int
+  rerankFailed  Boolean  @default(false)
+  cacheMs       Int?     @default(0)
+  parseTokens   Int?
+  rerankTokens  Int?
+  exaCostUsd    Float?
+  llmCostUsd    Float?
+  createdAt     DateTime @default(now())
+
+  @@index([evt, createdAt])
 }

@@ -41,10 +41,25 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionFunctionTool[] = [
   },
 ];
 
-export async function rerank(rawQuery: string, results: ExaResult[]): Promise<RerankItem[]> {
-  if (results.length === 0) return [];
+export type RerankResult = { items: RerankItem[]; tokens?: number };
+
+export async function rerank(
+  rawQuery: string,
+  results: ExaResult[],
+  signal?: AbortSignal,
+): Promise<RerankItem[]> {
+  const { items } = await rerankWithMetrics(rawQuery, results, signal);
+  return items;
+}
+
+export async function rerankWithMetrics(
+  rawQuery: string,
+  results: ExaResult[],
+  signal?: AbortSignal,
+): Promise<RerankResult> {
+  if (results.length === 0) return { items: [] };
   if (results.length === 1) {
-    return [{ idx: 0, score: 1.0, fit: "Only result available" }];
+    return { items: [{ idx: 0, score: 1.0, fit: "Only result available" }] };
   }
 
   const llm = getLLM();
@@ -53,23 +68,39 @@ export async function rerank(rawQuery: string, results: ExaResult[]): Promise<Re
     .map((r, i) => `${i}. ${r.title}\n   URL: ${r.url}\n   ${r.text.substring(0, 400)}`)
     .join("\n\n");
 
-  const response = await llm.chat.completions.create({
-    model: "deepseek-chat",
-    max_tokens: 2000,
-    temperature: 0,
-    messages: [
-      { role: "system", content: RERANK_RUBRIC },
-      { role: "user", content: `User query: "${rawQuery}"\n\nRate these job postings:\n\n${resultsList}` },
-    ],
-    tools: TOOLS,
-    tool_choice: { type: "function", function: { name: "rate_results" } },
-  });
+  const response = await llm.chat.completions.create(
+    {
+      model: "deepseek-chat",
+      max_tokens: 2000,
+      temperature: 0,
+      messages: [
+        { role: "system", content: RERANK_RUBRIC },
+        { role: "user", content: `User query: "${rawQuery}"\n\nRate these job postings:\n\n${resultsList}` },
+      ],
+      tools: TOOLS,
+      tool_choice: { type: "function", function: { name: "rate_results" } },
+    },
+    { signal },
+  );
 
+  const tokens = response.usage?.total_tokens;
   const toolCall = response.choices[0]?.message?.tool_calls?.[0];
   if (toolCall?.type === "function" && toolCall.function.name === "rate_results") {
     const rated = JSON.parse(toolCall.function.arguments) as { results: RerankItem[] };
-    return rated.results.sort((a, b) => b.score - a.score);
+
+    const valid = rated.results
+      .filter((r) => Number.isInteger(r.idx) && r.idx >= 0 && r.idx < results.length)
+      .map((r) => ({
+        idx: r.idx,
+        score: typeof r.score === "number" && r.score >= 0 && r.score <= 1 ? r.score : 0.5,
+        fit: typeof r.fit === "string" ? r.fit.slice(0, 120) : "",
+      }));
+
+    return { items: valid.sort((a, b) => b.score - a.score), tokens };
   }
 
-  return results.map((_, idx) => ({ idx, score: 0.5, fit: "Relevance not rated" }));
+  return {
+    items: results.map((_, idx) => ({ idx, score: 0.5, fit: "Relevance not rated" })),
+    tokens,
+  };
 }
