@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/himanshu-nakrani/OpenRoleKB/discussions
+    about: Questions, show-and-tell, and "how would I..." threads.
+  - name: Security vulnerability
+    url: https://github.com/himanshu-nakrani/OpenRoleKB/security/advisories/new
+    about: Report a security issue privately (do NOT open a public issue).
