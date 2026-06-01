@@ -16,11 +16,16 @@ export async function POST(req: NextRequest) {
     return new Response("invalid code", { status: 400 });
   }
 
-  const row = await prisma.transferCode.findUnique({ where: { code } });
-  if (!row || row.expiresAt < new Date()) {
+  // Atomic redeem: delete returns the row that was deleted. If two redeemers
+  // race, exactly one DELETE succeeds; the other gets P2025 (record not found)
+  // which we surface as 404 instead of an unhandled 500.
+  try {
+    const deleted = await prisma.transferCode.delete({ where: { code } });
+    if (deleted.expiresAt < new Date()) {
+      return new Response("not found or expired", { status: 404 });
+    }
+    return Response.json({ anonId: deleted.anonId });
+  } catch {
     return new Response("not found or expired", { status: 404 });
   }
-
-  await prisma.transferCode.delete({ where: { code } });
-  return Response.json({ anonId: row.anonId });
 }

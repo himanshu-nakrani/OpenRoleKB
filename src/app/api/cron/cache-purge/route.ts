@@ -2,7 +2,11 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get("x-cron-secret") !== process.env.CRON_SECRET) {
+  // Fail closed if CRON_SECRET is unset OR empty. A blank env var is a common
+  // misconfiguration that would otherwise let a request with an empty
+  // x-cron-secret header pass `"" !== ""` → false → auth bypass.
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers.get("x-cron-secret") !== secret) {
     return new Response("forbidden", { status: 403 });
   }
 
@@ -17,14 +21,13 @@ export async function GET(req: NextRequest) {
     where: { expiresAt: { lt: new Date() } },
   });
 
-  // Purge anon data older than 30 days (Q1 decision)
-  // Critical: only purge rows whose ownerKey looks like an anonId (UUID — contains dashes).
-  // User IDs are cuids (no dashes), so this naturally excludes them.
-  // Belt-and-suspenders: also exclude any registered user IDs explicitly.
+  // Purge anon data older than 30 days (Q1 decision).
+  // Anon ownerKeys are UUIDs (contain "-"); user ids are cuids (no dashes).
+  // We use raw SQL with `NOT IN (SELECT id FROM "User")` so Postgres does the
+  // filter without round-tripping every user id into Node memory. The dash
+  // check is the primary guard (cuids never contain "-"), and the subquery
+  // is belt-and-suspenders for any future identity format change.
   const anonCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-  const userIds = await prisma.user.findMany({ select: { id: true } });
-  const userIdList = userIds.map((u) => u.id);
 
   const { count: savedCount } = await prisma.savedSearch.deleteMany({
     where: {
@@ -33,23 +36,19 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  // Anon ownerKeys are UUIDs (contain "-"); cuids do not. Filtering on `contains: "-"`
-  // alone would safely scope to anon rows even if userIdList is empty, but we keep the
-  // notIn check as a second guard. Never rely on `notIn: []` alone — Postgres treats it
-  // as matching every row.
-  const { count: interactionCount } = await prisma.jobInteraction.deleteMany({
-    where: {
-      ownerKey: { contains: "-", notIn: userIdList },
-      createdAt: { lt: anonCutoff },
-    },
-  });
+  const interactionCount = await prisma.$executeRaw`
+    DELETE FROM "JobInteraction"
+    WHERE "createdAt" < ${anonCutoff}
+      AND "ownerKey" LIKE '%-%'
+      AND "ownerKey" NOT IN (SELECT id FROM "User")
+  `;
 
-  const { count: hiddenCount } = await prisma.hiddenCompany.deleteMany({
-    where: {
-      ownerKey: { contains: "-", notIn: userIdList },
-      createdAt: { lt: anonCutoff },
-    },
-  });
+  const hiddenCount = await prisma.$executeRaw`
+    DELETE FROM "HiddenCompany"
+    WHERE "createdAt" < ${anonCutoff}
+      AND "ownerKey" LIKE '%-%'
+      AND "ownerKey" NOT IN (SELECT id FROM "User")
+  `;
 
   return Response.json({
     purgedCaches: cacheCount,
