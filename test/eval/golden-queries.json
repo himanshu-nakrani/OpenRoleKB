@@ -1,0 +1,120 @@
+[
+  {
+    "name": "senior-react-remote-eu-no-crypto",
+    "query": "senior react engineer, remote EU timezone, no crypto",
+    "expectations": {
+      "topNMustMatch": {
+        "n": 5,
+        "minScore": 0.6,
+        "titleContainsAny": ["react", "frontend", "full[- ]stack"]
+      },
+      "mustExcludeCompanies": ["coinbase", "binance", "kraken", "chainalysis"],
+      "topResultMinScore": 0.7
+    }
+  },
+  {
+    "name": "junior-pm-fintech-nyc",
+    "query": "junior product manager, fintech, New York",
+    "expectations": {
+      "topNMustMatch": {
+        "n": 5,
+        "minScore": 0.55,
+        "titleContainsAny": ["product manager", "associate product", "apm"]
+      },
+      "topResultMinScore": 0.6,
+      "noSeniorRoles": true
+    }
+  },
+  {
+    "name": "data-eng-dbt-snowflake",
+    "query": "data engineer with dbt and snowflake experience",
+    "expectations": {
+      "topNMustMatch": {
+        "n": 5,
+        "minScore": 0.55,
+        "titleContainsAny": ["data engineer", "analytics engineer", "platform engineer"]
+      },
+      "topResultMinScore": 0.65
+    }
+  },
+  {
+    "name": "rust-backend-remote",
+    "query": "senior software engineer, Rust, remote",
+    "expectations": {
+      "topNMustMatch": {
+        "n": 5,
+        "minScore": 0.55,
+        "titleContainsAny": ["rust", "systems", "backend", "infrastructure"]
+      },
+      "topResultMinScore": 0.65
+    }
+  },
+  {
+    "name": "first-pm-early-stage",
+    "query": "first product manager at an early-stage startup, remote US",
+    "expectations": {
+      "topNMustMatch": {
+        "n": 3,
+        "minScore": 0.5,
+        "titleContainsAny": ["product manager", "head of product", "founding"]
+      },
+      "topResultMinScore": 0.55
+    }
+  },
+  {
+    "name": "staff-python-ml-sf",
+    "query": "staff python engineer with ML experience, SF",
+    "expectations": {
+      "topNMustMatch": {
+        "n": 5,
+        "minScore": 0.55,
+        "titleContainsAny": ["staff", "principal", "machine learning", "ml engineer", "python"]
+      },
+      "topResultMinScore": 0.65
+    }
+  },
+  {
+    "name": "design-engineer-anywhere",
+    "query": "design engineer who can prototype in code, remote anywhere",
+    "expectations": {
+      "topNMustMatch": {
+        "n": 3,
+        "minScore": 0.5,
+        "titleContainsAny": ["design engineer", "ux engineer", "design technologist"]
+      }
+    }
+  },
+  {
+    "name": "smart-contracts-deliberate-exclusion",
+    "query": "backend engineer, NOT crypto or blockchain",
+    "expectations": {
+      "mustExcludeCompanies": ["coinbase", "binance", "kraken", "chainalysis"],
+      "mustExcludeKeywordsInTitle": ["blockchain", "smart contract", "crypto", "web3"],
+      "topResultMinScore": 0.5
+    }
+  },
+  {
+    "name": "junior-remote-fresh",
+    "query": "junior software engineer, remote, posted this month",
+    "expectations": {
+      "topNMustMatch": {
+        "n": 5,
+        "minScore": 0.5,
+        "titleContainsAny": ["junior", "associate", "engineer i", "engineer 1", "engineer"]
+      },
+      "noSeniorRoles": true
+    }
+  },
+  {
+    "name": "platform-eng-k8s-aws",
+    "query": "platform engineer, kubernetes, AWS, remote",
+    "expectations": {
+      "topNMustMatch": {
+        "n": 5,
+        "minScore": 0.55,
+        "titleContainsAny": ["platform", "infrastructure", "devops", "sre", "site reliability"]
+      },
+      "topResultMinScore": 0.65
+    }
+  }
+]
