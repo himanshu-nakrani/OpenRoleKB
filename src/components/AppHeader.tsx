@@ -3,7 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { UserMenu } from "@/components/UserMenu";
-import { SignInModal } from "@/components/SignInModal";
+import dynamic from "next/dynamic";
+const SignInModal = dynamic(
+  () => import("@/components/SignInModal").then((m) => m.SignInModal),
+  { ssr: false },
+);
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useMergeOnSignIn } from "@/hooks/useMergeOnSignIn";
 

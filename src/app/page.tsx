@@ -55,6 +55,10 @@ export default function Home() {
       )}
       <SearchBox onStateChange={handleStateChange} />
 
+      {searchState.exaResults.length === 0 && searchState.phase !== "loading" && (
+        <SubHero />
+      )}
+
       <SavedSearches
         hasUnsavedSearch={
           searchState.phase === "idle" &&
@@ -97,5 +101,35 @@ export default function Home() {
         />
       ) : null}
     </div>
+  );
+}
+
+function SubHero() {
+  const items = [
+    {
+      title: "Neural search",
+      body: "Exa's neural index crawls career pages live — no stale boards, no indexing lag.",
+    },
+    {
+      title: "AI-ranked",
+      body: "Every result is scored against your full ask. Sub-40% matches are filtered out.",
+    },
+    {
+      title: "Real ATS sources",
+      body: "Direct from greenhouse.io, lever.co, ashbyhq, workable, workday and more.",
+    },
+  ];
+  return (
+    <section className="max-w-5xl mx-auto mt-16 mb-8 grid gap-6 sm:grid-cols-3 px-4 animate-fade-in">
+      {items.map((it) => (
+        <div
+          key={it.title}
+          className="rounded-2xl border border-border bg-surface/60 backdrop-blur-sm p-5 hover:border-border-strong transition-colors duration-120"
+        >
+          <h2 className="text-h2 font-medium text-ink font-display-opsz-h2">{it.title}</h2>
+          <p className="mt-2 text-small text-ink-soft leading-relaxed">{it.body}</p>
+        </div>
+      ))}
+    </section>
   );
 }

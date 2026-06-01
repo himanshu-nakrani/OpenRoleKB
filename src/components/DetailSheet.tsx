@@ -29,12 +29,13 @@ export function DetailSheet({ exaResults, reranked, selectedIdx, onClose }: Deta
     <dialog
       ref={dialogRef}
       onClose={onClose}
+      aria-label="Search result detail"
       className="fixed inset-0 m-0 w-full max-w-none h-full bg-surface p-6 overflow-y-auto backdrop:bg-ink/40 open:animate-slide-up"
     >
       <div className="max-w-2xl mx-auto">
         <button
           onClick={() => { dialogRef.current?.close(); onClose(); }}
-          className="mb-4 flex items-center gap-1 text-small text-ink-soft hover:text-ink transition-colors"
+          className="mb-4 flex items-center gap-1 text-small text-ink-soft hover:text-ink transition-colors duration-120"
         >
           <ChevronLeft size={14} strokeWidth={2} aria-hidden /> Back to results
         </button>

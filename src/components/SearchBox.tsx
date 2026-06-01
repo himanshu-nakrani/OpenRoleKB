@@ -37,6 +37,7 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
   });
   const stateRef = useRef(state);
   stateRef.current = state;
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (focused) return;
@@ -75,6 +76,9 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
     const q = query.trim();
     if (!q) return;
 
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
     setSaved(false);
     const newState: SearchState = {
       phase: "loading",
@@ -93,7 +97,8 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
           "Content-Type": "application/json",
           "x-anon-id": anonId,
         },
-        body: JSON.stringify({ query: q }),
+        body: JSON.stringify({ query: q, filters }),
+        signal: abortRef.current.signal,
       });
 
       if (!res.ok) {
@@ -162,7 +167,7 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
   async function handleSave() {
     try {
       const anonId = getAnonId();
-      await fetch("/api/saved", {
+      const res = await fetch("/api/saved", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -170,9 +175,15 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
         },
         body: JSON.stringify({ rawQuery: query.trim(), filters: state.filters }),
       });
+      if (!res.ok) {
+        setState((s) => ({ ...s, error: "Couldn't save this search." }));
+        return;
+      }
       setSaved(true);
       window.dispatchEvent(new CustomEvent("openrolekb:saved-changed"));
-    } catch {}
+    } catch {
+      setState((s) => ({ ...s, error: "Network error while saving." }));
+    }
   }
 
   function handleDropFilter(key: keyof Filters, value?: string) {
@@ -255,8 +266,8 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
       )}
 
       {state.error && (
-        <div className="mt-4 p-4 border-l-[3px] border-l-danger bg-surface rounded-r-lg text-small text-ink-soft animate-fade-in">
-          <p className="font-medium text-ink">Couldn&apos;t reach the search service.</p>
+        <div role="alert" className="mt-4 p-4 border-l-[3px] border-l-danger bg-surface rounded-r-lg text-small text-ink-soft animate-fade-in">
+          <p className="font-medium text-ink">Search hit a snag.</p>
           <p className="mt-1">{state.error}</p>
           <button
             onClick={() => runSearch()}
