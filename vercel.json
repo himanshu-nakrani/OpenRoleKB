@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/cache-purge",
+      "schedule": "5 2 * * *"
+    }
+  ]
+}
