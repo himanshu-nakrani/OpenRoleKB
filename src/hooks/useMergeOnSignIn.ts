@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 
 export function useMergeOnSignIn() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const merged = useRef(false);
 
   useEffect(() => {

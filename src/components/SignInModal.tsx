@@ -14,15 +14,21 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
 
+  // Sync the dialog element with the open prop — this is an external system
+  // (the DOM <dialog>), not React state, so a setState-free effect is fine.
   useEffect(() => {
     if (open) {
       dialogRef.current?.showModal();
     } else {
       dialogRef.current?.close();
-      setEmail("");
-      setSent(false);
     }
   }, [open]);
+
+  function handleClose() {
+    setEmail("");
+    setSent(false);
+    onClose();
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,7 +42,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
   return (
     <dialog
       ref={dialogRef}
-      onClose={onClose}
+      onClose={handleClose}
       className="backdrop:bg-black/60 rounded-2xl border border-border-strong bg-surface p-0 max-w-md w-[90vw] shadow-card open:animate-fade-in"
     >
       <div className="p-6">
@@ -47,7 +53,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
               We sent a magic link to <strong>{email}</strong>. Click it to sign in.
             </p>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="mt-4 text-accent text-small hover:underline"
             >
               Close
@@ -70,7 +76,7 @@ export function SignInModal({ open, onClose }: SignInModalProps) {
             <div className="flex gap-2 mt-4">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="flex-1 px-4 py-2 rounded-full border border-border text-small text-ink-soft hover:bg-surface-2 transition-all duration-120"
               >
                 Cancel

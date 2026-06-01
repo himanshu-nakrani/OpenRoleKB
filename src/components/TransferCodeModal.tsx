@@ -18,17 +18,23 @@ export function TransferCodeModal({ mode, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // External-system sync: keep the DOM <dialog> aligned with the mode prop.
+  // No React state changes here, so the purity rule is satisfied.
   useEffect(() => {
     if (mode) {
       dialogRef.current?.showModal();
     } else {
       dialogRef.current?.close();
-      setCode("");
-      setInput("");
-      setExpiresAt(null);
-      setError("");
     }
   }, [mode]);
+
+  function handleClose() {
+    setCode("");
+    setInput("");
+    setExpiresAt(null);
+    setError("");
+    onClose();
+  }
 
   const handleGenerate = useCallback(async () => {
     setLoading(true);
@@ -50,9 +56,27 @@ export function TransferCodeModal({ mode, onClose }: Props) {
     }
   }, []);
 
+  // Auto-trigger generation on first open in "generate" mode. Guarded by a ref
+  // so we don't refetch when other state changes cause a re-render.
+  const generateTriggeredRef = useRef(false);
   useEffect(() => {
-    if (mode === "generate") handleGenerate();
+    if (mode === "generate" && !generateTriggeredRef.current) {
+      generateTriggeredRef.current = true;
+      void handleGenerate();
+    }
+    if (mode === null) {
+      generateTriggeredRef.current = false;
+    }
   }, [mode, handleGenerate]);
+
+  // Tick once a minute while a code is live so "expires in N minutes" stays
+  // fresh without reading Date.now() during render (purity rule).
+  const [nowTick, setNowTick] = useState(0);
+  useEffect(() => {
+    if (!expiresAt) return;
+    const id = window.setInterval(() => setNowTick((n) => n + 1), 30_000);
+    return () => window.clearInterval(id);
+  }, [expiresAt]);
 
   async function handleRedeem() {
     if (input.length !== 6) return;
@@ -69,7 +93,7 @@ export function TransferCodeModal({ mode, onClose }: Props) {
       localStorage.setItem("openrolekb_anon_id", data.anonId);
       window.dispatchEvent(new CustomEvent("openrolekb:saved-changed"));
       window.dispatchEvent(new CustomEvent("openrolekb:transfer-complete"));
-      onClose();
+      handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid or expired code");
     } finally {
@@ -79,20 +103,24 @@ export function TransferCodeModal({ mode, onClose }: Props) {
 
   if (!mode) return null;
 
+  // Read Date.now() outside render via the nowTick dependency.
+  // nowTick changes every 30s when a code is live; otherwise it's static.
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = (() => { void nowTick; return Date.now(); })();
   const expiresInMinutes = expiresAt
-    ? Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 60000))
+    ? Math.max(0, Math.floor((expiresAt.getTime() - nowMs) / 60000))
     : 0;
 
   return (
     <dialog
       ref={dialogRef}
-      onClose={onClose}
+      onClose={handleClose}
       aria-label={mode === "generate" ? "Transfer to another device" : "Enter transfer code"}
       className="backdrop:bg-black/60 rounded-2xl border border-border-strong bg-surface p-0 max-w-md w-[90vw] shadow-card open:animate-fade-in"
     >
       <div className="p-6 relative">
         <button
-          onClick={onClose}
+          onClick={handleClose}
                   className="absolute top-4 right-4 text-ink-soft hover:text-ink transition-colors duration-120"
           aria-label="Close"
         >

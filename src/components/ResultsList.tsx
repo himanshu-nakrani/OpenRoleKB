@@ -32,10 +32,17 @@ export function ResultsList({
   const [visibleCount, setVisibleCount] = useState(25);
   const [sortMode, setSortMode] = useState<"match" | "newest">("match");
 
-  // Reset visible count when results change
-  useEffect(() => {
+  // Reset visibleCount when the results identity changes. React's official
+  // pattern for "derive state from a prop change" — set during render rather
+  // than in an effect, which avoids a wasted re-render and satisfies
+  // react-hooks/set-state-in-effect.
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [prevResultsKey, setPrevResultsKey] = useState<string>("");
+  const resultsKey = `${exaResults.length}:${reranked.length}`;
+  if (resultsKey !== prevResultsKey) {
+    setPrevResultsKey(resultsKey);
     setVisibleCount(25);
-  }, [exaResults, reranked]);
+  }
 
   const results = useMemo<MergedResult[]>(() => {
     let merged: MergedResult[];

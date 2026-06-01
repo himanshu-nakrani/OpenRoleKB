@@ -40,11 +40,15 @@ export function FeedbackModal({
       dialogRef.current?.showModal();
     } else {
       dialogRef.current?.close();
-      setKind("");
-      setComment("");
-      setSubmitted(false);
     }
   }, [open]);
+
+  function handleClose() {
+    setKind("");
+    setComment("");
+    setSubmitted(false);
+    onClose();
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -76,7 +80,7 @@ export function FeedbackModal({
   return (
     <dialog
       ref={dialogRef}
-      onClose={onClose}
+      onClose={handleClose}
       className="backdrop:bg-black/50 rounded-2xl border border-border-strong bg-surface p-0 max-w-md w-[90vw] shadow-card open:animate-fade-in"
       style={{ animation: submitted ? "none" : undefined }}
     >
@@ -84,7 +88,7 @@ export function FeedbackModal({
         {submitted ? (
           <div className="text-center py-4">
             <p className="text-body">Thanks, that helps.</p>
-            <button onClick={onClose} className="mt-4 text-accent text-small hover:underline">
+            <button onClick={handleClose} className="mt-4 text-accent text-small hover:underline">
               Close
             </button>
           </div>
@@ -118,7 +122,7 @@ export function FeedbackModal({
             <div className="flex gap-2 mt-4">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="flex-1 px-4 py-2 rounded-full border border-border text-small text-ink-soft hover:bg-surface-2 active:bg-surface-3 active:scale-[0.98] transition-all duration-120"
               >
                 Cancel

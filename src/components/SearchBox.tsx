@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { Search, CornerDownLeft, X } from "lucide-react";
 import type { Filters, ExaResult, RerankItem } from "@/types/job";
 
@@ -342,17 +342,23 @@ const EXAMPLES = [
 
 function ExampleQueries() {
   const key = "openrolekb_examples_seen";
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (sessionStorage.getItem(key) === null) {
-      setVisible(true);
-    }
-  }, []);
+  // useSyncExternalStore is React's answer to reading browser-only state
+  // during render without hydration mismatches. SSR returns false so the
+  // server-rendered HTML is stable; the client snapshot reads sessionStorage.
+  const visible = useSyncExternalStore(
+    (cb) => {
+      window.addEventListener("storage", cb);
+      return () => window.removeEventListener("storage", cb);
+    },
+    () => sessionStorage.getItem(key) === null,
+    () => false,
+  );
 
   function handleClick(query: string) {
     sessionStorage.setItem(key, "1");
-    setVisible(false);
+    // storage events don't fire in the same tab; dispatch manually so the
+    // useSyncExternalStore subscription re-reads and hides this widget.
+    window.dispatchEvent(new StorageEvent("storage", { key }));
     const input = document.querySelector<HTMLInputElement>('[data-ask-bar]');
     if (input) {
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
