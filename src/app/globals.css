@@ -46,51 +46,92 @@
 }
 
 :root {
-  --bg: #FBF8F4;
-  --surface: #FEFCF8;
-  --surface-2: #F4EFE7;
-  --surface-3: #EDE7DA;
-  --ink: #1F1A14;
-  --ink-soft: #5C5346;
-  --muted: #8C8272;
-  --border: #D6CCBB;
-  --border-strong: #A89E8A;
-  --accent: #E07A3A;
-  --accent-soft: #FBE7D5;
-  --accent-dark: #C45D20;
+  /* Aurora — light. Warm-cream neutrals + violet-indigo accent. */
+  --bg: #F7F5F2;
+  --surface: #FFFFFF;
+  --surface-2: #EFECE6;
+  --surface-3: #E4E0D9;
+  --ink: #1B1C2A;
+  --ink-soft: #51536F;
+  --muted: #8588A3;
+  --border: #DCD7CE;
+  --border-strong: #B0AAA1;
+  --accent: #7C5CFF;
+  --accent-soft: #EBE4FF;
+  --accent-dark: #5B3FE3;
   --accent-text: #FFFFFF;
-  --success: #5A9E6F;
-  --danger: #C9654A;
-  --shadow-card: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
-  --shadow-card-hover: 0 2px 4px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.06);
+  --success: #10B981;
+  --danger: #EF4858;
+  --shadow-card:
+    0 1px 2px rgba(28,28,52,0.04),
+    0 4px 14px rgba(28,28,52,0.05);
+  --shadow-card-hover:
+    0 2px 4px rgba(28,28,52,0.06),
+    0 10px 28px rgba(91,63,227,0.10);
 }
 
 .dark {
-  --bg: #12100D;
-  --surface: #1A1713;
-  --surface-2: #25211A;
-  --surface-3: #302B22;
-  --ink: #F2EBDC;
-  --ink-soft: #A89E8A;
-  --muted: #7A7062;
-  --border: #2E2920;
-  --border-strong: #3E3830;
-  --accent: #F49A5C;
-  --accent-soft: #3A2A1C;
-  --accent-dark: #E07A3A;
-  --accent-text: #1A1510;
-  --success: #7CB890;
-  --danger: #E07A6E;
-  --shadow-card: inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.15);
-  --shadow-card-hover: inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 16px rgba(0,0,0,0.25);
+  /* Aurora — dark. Deep midnight w/ blue undertone + glowing violet accent. */
+  --bg: #0C0E16;
+  --surface: #14172A;
+  --surface-2: #1D2138;
+  --surface-3: #272C47;
+  --ink: #ECEBF5;
+  --ink-soft: #A6A8C2;
+  --muted: #71748E;
+  --border: #232742;
+  --border-strong: #353A5C;
+  --accent: #A78BFA;
+  --accent-soft: #2A2154;
+  --accent-dark: #8B5CF6;
+  --accent-text: #0C0A20;
+  --success: #6EE7B7;
+  --danger: #F87171;
+  --shadow-card:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 2px 10px rgba(0,0,0,0.32),
+    0 0 0 1px rgba(167,139,250,0.04);
+  --shadow-card-hover:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 6px 22px rgba(0,0,0,0.42),
+    0 0 0 1px rgba(167,139,250,0.10),
+    0 0 24px rgba(167,139,250,0.08);
 }
 
 body {
   background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% -10%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 90% 110%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 70%);
+  background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-geist-sans);
   line-height: 1.55;
   -webkit-tap-highlight-color: transparent;
+}
+
+.dark body {
+  background-image:
+    radial-gradient(ellipse 70% 50% at 50% -10%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 90% 110%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 32%, transparent);
+  color: var(--ink);
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--ink-soft) 28%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--accent) 50%, transparent);
+  background-clip: content-box;
 }
 
 @layer utilities {

@@ -27,6 +27,7 @@ interface SavedSearchesProps {
 
 export function SavedSearches({ hasUnsavedSearch, onSaveCurrent }: SavedSearchesProps) {
   const [searches, setSearches] = useState<SavedSearch[]>([]);
+  const [undo, setUndo] = useState<SavedSearch | null>(null);
   const fetchedRef = useRef(false);
 
   const loadSearches = useCallback(async () => {
@@ -51,14 +52,36 @@ export function SavedSearches({ hasUnsavedSearch, onSaveCurrent }: SavedSearches
   }, [loadSearches]);
 
   async function handleDelete(id: string) {
+    const item = searches.find((s) => s.id === id);
+    if (!item) return;
+    setSearches((s) => s.filter((r) => r.id !== id));
+    setUndo(item);
+    setTimeout(() => {
+      setUndo(null);
+    }, 4000);
     try {
       const anonId = getAnonId();
       await fetch(`/api/saved?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
         headers: { "x-anon-id": anonId },
       });
-      setSearches((s) => s.filter((r) => r.id !== id));
-    } catch {}
+      setUndo(null);
+    } catch {
+      setSearches((s) => [...s, item].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      setUndo(null);
+    }
+  }
+
+  function handleUndo() {
+    if (!undo) return;
+    const toRestore = undo;
+    setSearches((s) => [...s, toRestore].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    setUndo(null);
+    fetch("/api/saved", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-anon-id": getAnonId() },
+      body: JSON.stringify({ rawQuery: toRestore.rawQuery, filters: toRestore.filters }),
+    }).catch(() => {});
   }
 
   function handleRerun(rawQuery: string) {
@@ -77,41 +100,51 @@ export function SavedSearches({ hasUnsavedSearch, onSaveCurrent }: SavedSearches
   if (searches.length === 0 && !hasUnsavedSearch) return null;
 
   return (
-    <div className="mt-4 max-w-3xl mx-auto">
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <span className="text-micro text-ink-soft shrink-0">Recent:</span>
-        {searches.map((s) => (
-          <div
-            key={s.id}
-            className="group flex items-center gap-1 shrink-0"
-          >
-            <button
-              onClick={() => handleRerun(s.rawQuery)}
-              className="px-3 py-1 text-micro rounded-full bg-surface-2 text-ink-soft hover:bg-surface-2/80 transition-colors truncate max-w-[200px]"
+    <div className="max-w-3xl mx-auto">
+      <div className="mt-6 rounded-xl bg-surface-2 border border-border/60 px-4 py-3">
+        <p className="text-micro text-muted mb-2">Your saved searches</p>
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+          {searches.map((s) => (
+            <div
+              key={s.id}
+              className="group flex items-center gap-1 shrink-0"
             >
-              {s.rawQuery.length > 28 ? s.rawQuery.substring(0, 26) + "…" : s.rawQuery}
-            </button>
+              <button
+                onClick={() => handleRerun(s.rawQuery)}
+                className="px-4 py-1 text-micro rounded-full bg-surface text-ink-soft hover:bg-surface-3 transition-colors duration-120 truncate max-w-[220px]"
+              >
+                {s.rawQuery.length > 30 ? s.rawQuery.substring(0, 28) + "…" : s.rawQuery}
+              </button>
+              <button
+                onClick={() => handleDelete(s.id)}
+                className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-ink-soft/40 hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity duration-120"
+                title="Remove saved search"
+                aria-label="Remove saved search"
+              >
+                <X size={12} strokeWidth={2} aria-hidden />
+              </button>
+            </div>
+          ))}
+          {hasUnsavedSearch && onSaveCurrent && (
             <button
-              onClick={() => handleDelete(s.id)}
-              className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-ink-soft/40 hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
-              title="Remove saved search"
-              aria-label="Remove saved search"
+              onClick={onSaveCurrent}
+              className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-surface text-ink-soft hover:text-accent transition-colors duration-120"
+              title="Save current search"
+              aria-label="Save current search"
             >
-              <X size={12} strokeWidth={2} aria-hidden />
+              <Plus size={14} strokeWidth={2} aria-hidden />
             </button>
-          </div>
-        ))}
-        {hasUnsavedSearch && onSaveCurrent && (
-          <button
-            onClick={onSaveCurrent}
-            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-surface-2 text-ink-soft hover:text-accent transition-colors"
-            title="Save this search"
-            aria-label="Save this search"
-          >
-            <Plus size={14} strokeWidth={2} aria-hidden />
-          </button>
-        )}
+          )}
+        </div>
       </div>
+      {undo && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-ink text-bg text-small shadow-lg animate-slide-up">
+          Removed.{" "}
+          <button onClick={handleUndo} className="text-accent hover:underline">
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "exa-1",
+    "title": "Senior React Engineer",
+    "url": "https://boards.greenhouse.io/acmerobotics/jobs/12345",
+    "text": "We are looking for a Senior React Engineer to join our remote team in the EU. You will build frontend infrastructure using React, TypeScript, and Next.js. 5+ years of experience required.",
+    "highlights": ["Senior React Engineer", "React, TypeScript, Next.js"],
+    "publishedDate": "2026-05-20",
+    "author": "Acme Robotics"
+  },
+  {
+    "id": "exa-2",
+    "title": "Frontend Developer — Remote EU",
+    "url": "https://jobs.lever.co/superhuman/abc-def",
+    "text": "Superhuman is hiring a Frontend Developer for our EU-based team. Work remotely with React, Redux, and modern CSS. We value clean code and great UX.",
+    "highlights": ["Frontend Developer", "Remote EU", "React"],
+    "publishedDate": "2026-05-25",
+    "author": "Superhuman"
+  },
+  {
+    "id": "exa-3",
+    "title": "Software Engineer",
+    "url": "https://jobs.ashbyhq.com/notion/some-id",
+    "text": "Notion is hiring a Software Engineer to work on our core product. You'll build features used by millions. React experience preferred.",
+    "highlights": ["Software Engineer", "React"],
+    "publishedDate": "2026-05-28",
+    "author": "Notion"
+  },
+  {
+    "id": "exa-4",
+    "title": "Junior Backend Developer",
+    "url": "https://apply.workable.com/automattic/j/ABC123/",
+    "text": "Automattic is looking for a Junior Backend Developer. Work on WordPress infrastructure with PHP and MySQL.",
+    "highlights": ["Junior Backend Developer", "PHP", "MySQL"],
+    "publishedDate": "2026-05-15",
+    "author": "Automattic"
+  },
+  {
+    "id": "exa-5",
+    "title": "Staff Platform Engineer",
+    "url": "https://www.linkedin.com/jobs/view/9999",
+    "text": "We need a Staff Platform Engineer to design and build our cloud infrastructure on AWS.",
+    "highlights": ["Staff Platform Engineer", "AWS"],
+    "publishedDate": "2026-05-22",
+    "author": "BigTech Corp"
+  }
+]

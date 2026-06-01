@@ -53,7 +53,17 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   Job: 'Job',
   SearchCache: 'SearchCache',
-  SavedSearch: 'SavedSearch'
+  SavedSearch: 'SavedSearch',
+  JobInteraction: 'JobInteraction',
+  HiddenCompany: 'HiddenCompany',
+  FeedbackEvent: 'FeedbackEvent',
+  User: 'User',
+  Account: 'Account',
+  Session: 'Session',
+  VerificationToken: 'VerificationToken',
+  TransferCode: 'TransferCode',
+  EvalRun: 'EvalRun',
+  EventLog: 'EventLog'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -78,6 +88,7 @@ export const JobScalarFieldEnum = {
   title: 'title',
   company: 'company',
   location: 'location',
+  isRemote: 'isRemote',
   description: 'description',
   publishedAt: 'publishedAt',
   source: 'source',
@@ -104,12 +115,153 @@ export type SearchCacheScalarFieldEnum = (typeof SearchCacheScalarFieldEnum)[key
 export const SavedSearchScalarFieldEnum = {
   id: 'id',
   anonId: 'anonId',
+  userId: 'userId',
+  queryHash: 'queryHash',
   rawQuery: 'rawQuery',
   filters: 'filters',
   createdAt: 'createdAt'
 } as const
 
 export type SavedSearchScalarFieldEnum = (typeof SavedSearchScalarFieldEnum)[keyof typeof SavedSearchScalarFieldEnum]
+
+
+export const JobInteractionScalarFieldEnum = {
+  id: 'id',
+  ownerKey: 'ownerKey',
+  jobId: 'jobId',
+  kind: 'kind',
+  note: 'note',
+  createdAt: 'createdAt'
+} as const
+
+export type JobInteractionScalarFieldEnum = (typeof JobInteractionScalarFieldEnum)[keyof typeof JobInteractionScalarFieldEnum]
+
+
+export const HiddenCompanyScalarFieldEnum = {
+  id: 'id',
+  ownerKey: 'ownerKey',
+  company: 'company',
+  createdAt: 'createdAt'
+} as const
+
+export type HiddenCompanyScalarFieldEnum = (typeof HiddenCompanyScalarFieldEnum)[keyof typeof HiddenCompanyScalarFieldEnum]
+
+
+export const FeedbackEventScalarFieldEnum = {
+  id: 'id',
+  ownerKey: 'ownerKey',
+  jobId: 'jobId',
+  kind: 'kind',
+  rawQuery: 'rawQuery',
+  filters: 'filters',
+  rerankScore: 'rerankScore',
+  fit: 'fit',
+  comment: 'comment',
+  createdAt: 'createdAt'
+} as const
+
+export type FeedbackEventScalarFieldEnum = (typeof FeedbackEventScalarFieldEnum)[keyof typeof FeedbackEventScalarFieldEnum]
+
+
+export const UserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  name: 'name',
+  image: 'image',
+  emailVerified: 'emailVerified',
+  anonId: 'anonId',
+  createdAt: 'createdAt'
+} as const
+
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const AccountScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  provider: 'provider',
+  providerAccountId: 'providerAccountId',
+  refresh_token: 'refresh_token',
+  access_token: 'access_token',
+  expires_at: 'expires_at',
+  token_type: 'token_type',
+  scope: 'scope',
+  id_token: 'id_token',
+  session_state: 'session_state'
+} as const
+
+export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeof AccountScalarFieldEnum]
+
+
+export const SessionScalarFieldEnum = {
+  id: 'id',
+  sessionToken: 'sessionToken',
+  userId: 'userId',
+  expires: 'expires'
+} as const
+
+export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
+
+
+export const VerificationTokenScalarFieldEnum = {
+  identifier: 'identifier',
+  token: 'token',
+  expires: 'expires'
+} as const
+
+export type VerificationTokenScalarFieldEnum = (typeof VerificationTokenScalarFieldEnum)[keyof typeof VerificationTokenScalarFieldEnum]
+
+
+export const TransferCodeScalarFieldEnum = {
+  code: 'code',
+  anonId: 'anonId',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+} as const
+
+export type TransferCodeScalarFieldEnum = (typeof TransferCodeScalarFieldEnum)[keyof typeof TransferCodeScalarFieldEnum]
+
+
+export const EvalRunScalarFieldEnum = {
+  id: 'id',
+  runId: 'runId',
+  caseName: 'caseName',
+  query: 'query',
+  score: 'score',
+  passed: 'passed',
+  failures: 'failures',
+  durationMs: 'durationMs',
+  tokens: 'tokens',
+  costUsd: 'costUsd',
+  rubric: 'rubric',
+  notes: 'notes',
+  createdAt: 'createdAt'
+} as const
+
+export type EvalRunScalarFieldEnum = (typeof EvalRunScalarFieldEnum)[keyof typeof EvalRunScalarFieldEnum]
+
+
+export const EventLogScalarFieldEnum = {
+  id: 'id',
+  evt: 'evt',
+  ownerKey: 'ownerKey',
+  cacheHit: 'cacheHit',
+  resultCount: 'resultCount',
+  parseMs: 'parseMs',
+  exaMs: 'exaMs',
+  rerankMs: 'rerankMs',
+  totalMs: 'totalMs',
+  rerankFailed: 'rerankFailed',
+  cacheMs: 'cacheMs',
+  parseTokens: 'parseTokens',
+  rerankTokens: 'rerankTokens',
+  exaCostUsd: 'exaCostUsd',
+  llmCostUsd: 'llmCostUsd',
+  createdAt: 'createdAt'
+} as const
+
+export type EventLogScalarFieldEnum = (typeof EventLogScalarFieldEnum)[keyof typeof EventLogScalarFieldEnum]
 
 
 export const SortOrder = {

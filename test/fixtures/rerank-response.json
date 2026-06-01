@@ -1,0 +1,7 @@
+[
+  { "idx": 0, "score": 0.95, "fit": "Perfect match: senior React role, remote EU, matches all constraints" },
+  { "idx": 1, "score": 0.85, "fit": "Excellent match: frontend with React, remote EU, slight title mismatch" },
+  { "idx": 2, "score": 0.45, "fit": "Partial match: software engineer but no seniority specified" },
+  { "idx": 3, "score": 0.15, "fit": "Poor match: junior backend role with PHP, not React or senior" },
+  { "idx": 4, "score": 0.30, "fit": "Weak match: platform engineer not frontend, no React mentioned" }
+]

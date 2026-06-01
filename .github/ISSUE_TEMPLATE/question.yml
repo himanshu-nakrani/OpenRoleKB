@@ -1,0 +1,14 @@
+name: Question / Discussion
+description: Have a question? Open a Discussion thread instead — but if you think the answer benefits the issue tracker, file here.
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For general questions, please prefer [GitHub Discussions](https://github.com/himanshu-nakrani/OpenRoleKB/discussions).
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true

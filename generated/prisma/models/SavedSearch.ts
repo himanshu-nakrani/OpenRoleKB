@@ -27,6 +27,8 @@ export type AggregateSavedSearch = {
 export type SavedSearchMinAggregateOutputType = {
   id: string | null
   anonId: string | null
+  userId: string | null
+  queryHash: string | null
   rawQuery: string | null
   createdAt: Date | null
 }
@@ -34,6 +36,8 @@ export type SavedSearchMinAggregateOutputType = {
 export type SavedSearchMaxAggregateOutputType = {
   id: string | null
   anonId: string | null
+  userId: string | null
+  queryHash: string | null
   rawQuery: string | null
   createdAt: Date | null
 }
@@ -41,6 +45,8 @@ export type SavedSearchMaxAggregateOutputType = {
 export type SavedSearchCountAggregateOutputType = {
   id: number
   anonId: number
+  userId: number
+  queryHash: number
   rawQuery: number
   filters: number
   createdAt: number
@@ -51,6 +57,8 @@ export type SavedSearchCountAggregateOutputType = {
 export type SavedSearchMinAggregateInputType = {
   id?: true
   anonId?: true
+  userId?: true
+  queryHash?: true
   rawQuery?: true
   createdAt?: true
 }
@@ -58,6 +66,8 @@ export type SavedSearchMinAggregateInputType = {
 export type SavedSearchMaxAggregateInputType = {
   id?: true
   anonId?: true
+  userId?: true
+  queryHash?: true
   rawQuery?: true
   createdAt?: true
 }
@@ -65,6 +75,8 @@ export type SavedSearchMaxAggregateInputType = {
 export type SavedSearchCountAggregateInputType = {
   id?: true
   anonId?: true
+  userId?: true
+  queryHash?: true
   rawQuery?: true
   filters?: true
   createdAt?: true
@@ -145,7 +157,9 @@ export type SavedSearchGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inte
 
 export type SavedSearchGroupByOutputType = {
   id: string
-  anonId: string
+  anonId: string | null
+  userId: string | null
+  queryHash: string
   rawQuery: string
   filters: runtime.JsonValue
   createdAt: Date
@@ -174,34 +188,47 @@ export type SavedSearchWhereInput = {
   OR?: Prisma.SavedSearchWhereInput[]
   NOT?: Prisma.SavedSearchWhereInput | Prisma.SavedSearchWhereInput[]
   id?: Prisma.StringFilter<"SavedSearch"> | string
-  anonId?: Prisma.StringFilter<"SavedSearch"> | string
+  anonId?: Prisma.StringNullableFilter<"SavedSearch"> | string | null
+  userId?: Prisma.StringNullableFilter<"SavedSearch"> | string | null
+  queryHash?: Prisma.StringFilter<"SavedSearch"> | string
   rawQuery?: Prisma.StringFilter<"SavedSearch"> | string
   filters?: Prisma.JsonFilter<"SavedSearch">
   createdAt?: Prisma.DateTimeFilter<"SavedSearch"> | Date | string
+  user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
 }
 
 export type SavedSearchOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  anonId?: Prisma.SortOrder
+  anonId?: Prisma.SortOrderInput | Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
+  queryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   filters?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  user?: Prisma.UserOrderByWithRelationInput
 }
 
 export type SavedSearchWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  userId_queryHash?: Prisma.SavedSearchUserIdQueryHashCompoundUniqueInput
+  anonId_queryHash?: Prisma.SavedSearchAnonIdQueryHashCompoundUniqueInput
   AND?: Prisma.SavedSearchWhereInput | Prisma.SavedSearchWhereInput[]
   OR?: Prisma.SavedSearchWhereInput[]
   NOT?: Prisma.SavedSearchWhereInput | Prisma.SavedSearchWhereInput[]
-  anonId?: Prisma.StringFilter<"SavedSearch"> | string
+  anonId?: Prisma.StringNullableFilter<"SavedSearch"> | string | null
+  userId?: Prisma.StringNullableFilter<"SavedSearch"> | string | null
+  queryHash?: Prisma.StringFilter<"SavedSearch"> | string
   rawQuery?: Prisma.StringFilter<"SavedSearch"> | string
   filters?: Prisma.JsonFilter<"SavedSearch">
   createdAt?: Prisma.DateTimeFilter<"SavedSearch"> | Date | string
-}, "id">
+  user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+}, "id" | "userId_queryHash" | "anonId_queryHash">
 
 export type SavedSearchOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  anonId?: Prisma.SortOrder
+  anonId?: Prisma.SortOrderInput | Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
+  queryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   filters?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -215,7 +242,9 @@ export type SavedSearchScalarWhereWithAggregatesInput = {
   OR?: Prisma.SavedSearchScalarWhereWithAggregatesInput[]
   NOT?: Prisma.SavedSearchScalarWhereWithAggregatesInput | Prisma.SavedSearchScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"SavedSearch"> | string
-  anonId?: Prisma.StringWithAggregatesFilter<"SavedSearch"> | string
+  anonId?: Prisma.StringNullableWithAggregatesFilter<"SavedSearch"> | string | null
+  userId?: Prisma.StringNullableWithAggregatesFilter<"SavedSearch"> | string | null
+  queryHash?: Prisma.StringWithAggregatesFilter<"SavedSearch"> | string
   rawQuery?: Prisma.StringWithAggregatesFilter<"SavedSearch"> | string
   filters?: Prisma.JsonWithAggregatesFilter<"SavedSearch">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SavedSearch"> | Date | string
@@ -223,15 +252,19 @@ export type SavedSearchScalarWhereWithAggregatesInput = {
 
 export type SavedSearchCreateInput = {
   id?: string
-  anonId: string
+  anonId?: string | null
+  queryHash: string
   rawQuery: string
   filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  user?: Prisma.UserCreateNestedOneWithoutSavedSearchesInput
 }
 
 export type SavedSearchUncheckedCreateInput = {
   id?: string
-  anonId: string
+  anonId?: string | null
+  userId?: string | null
+  queryHash: string
   rawQuery: string
   filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -239,15 +272,19 @@ export type SavedSearchUncheckedCreateInput = {
 
 export type SavedSearchUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  anonId?: Prisma.StringFieldUpdateOperationsInput | string
+  anonId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queryHash?: Prisma.StringFieldUpdateOperationsInput | string
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user?: Prisma.UserUpdateOneWithoutSavedSearchesNestedInput
 }
 
 export type SavedSearchUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  anonId?: Prisma.StringFieldUpdateOperationsInput | string
+  anonId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queryHash?: Prisma.StringFieldUpdateOperationsInput | string
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -255,7 +292,9 @@ export type SavedSearchUncheckedUpdateInput = {
 
 export type SavedSearchCreateManyInput = {
   id?: string
-  anonId: string
+  anonId?: string | null
+  userId?: string | null
+  queryHash: string
   rawQuery: string
   filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -263,7 +302,8 @@ export type SavedSearchCreateManyInput = {
 
 export type SavedSearchUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  anonId?: Prisma.StringFieldUpdateOperationsInput | string
+  anonId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queryHash?: Prisma.StringFieldUpdateOperationsInput | string
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -271,15 +311,29 @@ export type SavedSearchUpdateManyMutationInput = {
 
 export type SavedSearchUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  anonId?: Prisma.StringFieldUpdateOperationsInput | string
+  anonId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queryHash?: Prisma.StringFieldUpdateOperationsInput | string
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type SavedSearchUserIdQueryHashCompoundUniqueInput = {
+  userId: string
+  queryHash: string
+}
+
+export type SavedSearchAnonIdQueryHashCompoundUniqueInput = {
+  anonId: string
+  queryHash: string
+}
+
 export type SavedSearchCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   anonId?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
+  queryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   filters?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -288,6 +342,8 @@ export type SavedSearchCountOrderByAggregateInput = {
 export type SavedSearchMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   anonId?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
+  queryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -295,8 +351,155 @@ export type SavedSearchMaxOrderByAggregateInput = {
 export type SavedSearchMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   anonId?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
+  queryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+}
+
+export type SavedSearchListRelationFilter = {
+  every?: Prisma.SavedSearchWhereInput
+  some?: Prisma.SavedSearchWhereInput
+  none?: Prisma.SavedSearchWhereInput
+}
+
+export type SavedSearchOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
+}
+
+export type SavedSearchCreateNestedManyWithoutUserInput = {
+  create?: Prisma.XOR<Prisma.SavedSearchCreateWithoutUserInput, Prisma.SavedSearchUncheckedCreateWithoutUserInput> | Prisma.SavedSearchCreateWithoutUserInput[] | Prisma.SavedSearchUncheckedCreateWithoutUserInput[]
+  connectOrCreate?: Prisma.SavedSearchCreateOrConnectWithoutUserInput | Prisma.SavedSearchCreateOrConnectWithoutUserInput[]
+  createMany?: Prisma.SavedSearchCreateManyUserInputEnvelope
+  connect?: Prisma.SavedSearchWhereUniqueInput | Prisma.SavedSearchWhereUniqueInput[]
+}
+
+export type SavedSearchUncheckedCreateNestedManyWithoutUserInput = {
+  create?: Prisma.XOR<Prisma.SavedSearchCreateWithoutUserInput, Prisma.SavedSearchUncheckedCreateWithoutUserInput> | Prisma.SavedSearchCreateWithoutUserInput[] | Prisma.SavedSearchUncheckedCreateWithoutUserInput[]
+  connectOrCreate?: Prisma.SavedSearchCreateOrConnectWithoutUserInput | Prisma.SavedSearchCreateOrConnectWithoutUserInput[]
+  createMany?: Prisma.SavedSearchCreateManyUserInputEnvelope
+  connect?: Prisma.SavedSearchWhereUniqueInput | Prisma.SavedSearchWhereUniqueInput[]
+}
+
+export type SavedSearchUpdateManyWithoutUserNestedInput = {
+  create?: Prisma.XOR<Prisma.SavedSearchCreateWithoutUserInput, Prisma.SavedSearchUncheckedCreateWithoutUserInput> | Prisma.SavedSearchCreateWithoutUserInput[] | Prisma.SavedSearchUncheckedCreateWithoutUserInput[]
+  connectOrCreate?: Prisma.SavedSearchCreateOrConnectWithoutUserInput | Prisma.SavedSearchCreateOrConnectWithoutUserInput[]
+  upsert?: Prisma.SavedSearchUpsertWithWhereUniqueWithoutUserInput | Prisma.SavedSearchUpsertWithWhereUniqueWithoutUserInput[]
+  createMany?: Prisma.SavedSearchCreateManyUserInputEnvelope
+  set?: Prisma.SavedSearchWhereUniqueInput | Prisma.SavedSearchWhereUniqueInput[]
+  disconnect?: Prisma.SavedSearchWhereUniqueInput | Prisma.SavedSearchWhereUniqueInput[]
+  delete?: Prisma.SavedSearchWhereUniqueInput | Prisma.SavedSearchWhereUniqueInput[]
+  connect?: Prisma.SavedSearchWhereUniqueInput | Prisma.SavedSearchWhereUniqueInput[]
+  update?: Prisma.SavedSearchUpdateWithWhereUniqueWithoutUserInput | Prisma.SavedSearchUpdateWithWhereUniqueWithoutUserInput[]
+  updateMany?: Prisma.SavedSearchUpdateManyWithWhereWithoutUserInput | Prisma.SavedSearchUpdateManyWithWhereWithoutUserInput[]
+  deleteMany?: Prisma.SavedSearchScalarWhereInput | Prisma.SavedSearchScalarWhereInput[]
+}
+
+export type SavedSearchUncheckedUpdateManyWithoutUserNestedInput = {
+  create?: Prisma.XOR<Prisma.SavedSearchCreateWithoutUserInput, Prisma.SavedSearchUncheckedCreateWithoutUserInput> | Prisma.SavedSearchCreateWithoutUserInput[] | Prisma.SavedSearchUncheckedCreateWithoutUserInput[]
+  connectOrCreate?: Prisma.SavedSearchCreateOrConnectWithoutUserInput | Prisma.SavedSearchCreateOrConnectWithoutUserInput[]
+  upsert?: Prisma.SavedSearchUpsertWithWhereUniqueWithoutUserInput | Prisma.SavedSearchUpsertWithWhereUniqueWithoutUserInput[]
+  createMany?: Prisma.SavedSearchCreateManyUserInputEnvelope
+  set?: Prisma.SavedSearchWhereUniqueInput | Prisma.SavedSearchWhereUniqueInput[]
+  disconnect?: Prisma.SavedSearchWhereUniqueInput | Prisma.SavedSearchWhereUniqueInput[]
+  delete?: Prisma.SavedSearchWhereUniqueInput | Prisma.SavedSearchWhereUniqueInput[]
+  connect?: Prisma.SavedSearchWhereUniqueInput | Prisma.SavedSearchWhereUniqueInput[]
+  update?: Prisma.SavedSearchUpdateWithWhereUniqueWithoutUserInput | Prisma.SavedSearchUpdateWithWhereUniqueWithoutUserInput[]
+  updateMany?: Prisma.SavedSearchUpdateManyWithWhereWithoutUserInput | Prisma.SavedSearchUpdateManyWithWhereWithoutUserInput[]
+  deleteMany?: Prisma.SavedSearchScalarWhereInput | Prisma.SavedSearchScalarWhereInput[]
+}
+
+export type SavedSearchCreateWithoutUserInput = {
+  id?: string
+  anonId?: string | null
+  queryHash: string
+  rawQuery: string
+  filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+}
+
+export type SavedSearchUncheckedCreateWithoutUserInput = {
+  id?: string
+  anonId?: string | null
+  queryHash: string
+  rawQuery: string
+  filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+}
+
+export type SavedSearchCreateOrConnectWithoutUserInput = {
+  where: Prisma.SavedSearchWhereUniqueInput
+  create: Prisma.XOR<Prisma.SavedSearchCreateWithoutUserInput, Prisma.SavedSearchUncheckedCreateWithoutUserInput>
+}
+
+export type SavedSearchCreateManyUserInputEnvelope = {
+  data: Prisma.SavedSearchCreateManyUserInput | Prisma.SavedSearchCreateManyUserInput[]
+  skipDuplicates?: boolean
+}
+
+export type SavedSearchUpsertWithWhereUniqueWithoutUserInput = {
+  where: Prisma.SavedSearchWhereUniqueInput
+  update: Prisma.XOR<Prisma.SavedSearchUpdateWithoutUserInput, Prisma.SavedSearchUncheckedUpdateWithoutUserInput>
+  create: Prisma.XOR<Prisma.SavedSearchCreateWithoutUserInput, Prisma.SavedSearchUncheckedCreateWithoutUserInput>
+}
+
+export type SavedSearchUpdateWithWhereUniqueWithoutUserInput = {
+  where: Prisma.SavedSearchWhereUniqueInput
+  data: Prisma.XOR<Prisma.SavedSearchUpdateWithoutUserInput, Prisma.SavedSearchUncheckedUpdateWithoutUserInput>
+}
+
+export type SavedSearchUpdateManyWithWhereWithoutUserInput = {
+  where: Prisma.SavedSearchScalarWhereInput
+  data: Prisma.XOR<Prisma.SavedSearchUpdateManyMutationInput, Prisma.SavedSearchUncheckedUpdateManyWithoutUserInput>
+}
+
+export type SavedSearchScalarWhereInput = {
+  AND?: Prisma.SavedSearchScalarWhereInput | Prisma.SavedSearchScalarWhereInput[]
+  OR?: Prisma.SavedSearchScalarWhereInput[]
+  NOT?: Prisma.SavedSearchScalarWhereInput | Prisma.SavedSearchScalarWhereInput[]
+  id?: Prisma.StringFilter<"SavedSearch"> | string
+  anonId?: Prisma.StringNullableFilter<"SavedSearch"> | string | null
+  userId?: Prisma.StringNullableFilter<"SavedSearch"> | string | null
+  queryHash?: Prisma.StringFilter<"SavedSearch"> | string
+  rawQuery?: Prisma.StringFilter<"SavedSearch"> | string
+  filters?: Prisma.JsonFilter<"SavedSearch">
+  createdAt?: Prisma.DateTimeFilter<"SavedSearch"> | Date | string
+}
+
+export type SavedSearchCreateManyUserInput = {
+  id?: string
+  anonId?: string | null
+  queryHash: string
+  rawQuery: string
+  filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+}
+
+export type SavedSearchUpdateWithoutUserInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  anonId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queryHash?: Prisma.StringFieldUpdateOperationsInput | string
+  rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
+  filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type SavedSearchUncheckedUpdateWithoutUserInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  anonId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queryHash?: Prisma.StringFieldUpdateOperationsInput | string
+  rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
+  filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type SavedSearchUncheckedUpdateManyWithoutUserInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  anonId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queryHash?: Prisma.StringFieldUpdateOperationsInput | string
+  rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
+  filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -304,43 +507,67 @@ export type SavedSearchMinOrderByAggregateInput = {
 export type SavedSearchSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   anonId?: boolean
+  userId?: boolean
+  queryHash?: boolean
   rawQuery?: boolean
   filters?: boolean
   createdAt?: boolean
+  user?: boolean | Prisma.SavedSearch$userArgs<ExtArgs>
 }, ExtArgs["result"]["savedSearch"]>
 
 export type SavedSearchSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   anonId?: boolean
+  userId?: boolean
+  queryHash?: boolean
   rawQuery?: boolean
   filters?: boolean
   createdAt?: boolean
+  user?: boolean | Prisma.SavedSearch$userArgs<ExtArgs>
 }, ExtArgs["result"]["savedSearch"]>
 
 export type SavedSearchSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   anonId?: boolean
+  userId?: boolean
+  queryHash?: boolean
   rawQuery?: boolean
   filters?: boolean
   createdAt?: boolean
+  user?: boolean | Prisma.SavedSearch$userArgs<ExtArgs>
 }, ExtArgs["result"]["savedSearch"]>
 
 export type SavedSearchSelectScalar = {
   id?: boolean
   anonId?: boolean
+  userId?: boolean
+  queryHash?: boolean
   rawQuery?: boolean
   filters?: boolean
   createdAt?: boolean
 }
 
-export type SavedSearchOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "anonId" | "rawQuery" | "filters" | "createdAt", ExtArgs["result"]["savedSearch"]>
+export type SavedSearchOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "anonId" | "userId" | "queryHash" | "rawQuery" | "filters" | "createdAt", ExtArgs["result"]["savedSearch"]>
+export type SavedSearchInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  user?: boolean | Prisma.SavedSearch$userArgs<ExtArgs>
+}
+export type SavedSearchIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  user?: boolean | Prisma.SavedSearch$userArgs<ExtArgs>
+}
+export type SavedSearchIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  user?: boolean | Prisma.SavedSearch$userArgs<ExtArgs>
+}
 
 export type $SavedSearchPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "SavedSearch"
-  objects: {}
+  objects: {
+    user: Prisma.$UserPayload<ExtArgs> | null
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    anonId: string
+    anonId: string | null
+    userId: string | null
+    queryHash: string
     rawQuery: string
     filters: runtime.JsonValue
     createdAt: Date
@@ -738,6 +965,7 @@ readonly fields: SavedSearchFieldRefs;
  */
 export interface Prisma__SavedSearchClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  user<T extends Prisma.SavedSearch$userArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SavedSearch$userArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -769,6 +997,8 @@ export interface Prisma__SavedSearchClient<T, Null = never, ExtArgs extends runt
 export interface SavedSearchFieldRefs {
   readonly id: Prisma.FieldRef<"SavedSearch", 'String'>
   readonly anonId: Prisma.FieldRef<"SavedSearch", 'String'>
+  readonly userId: Prisma.FieldRef<"SavedSearch", 'String'>
+  readonly queryHash: Prisma.FieldRef<"SavedSearch", 'String'>
   readonly rawQuery: Prisma.FieldRef<"SavedSearch", 'String'>
   readonly filters: Prisma.FieldRef<"SavedSearch", 'Json'>
   readonly createdAt: Prisma.FieldRef<"SavedSearch", 'DateTime'>
@@ -789,6 +1019,10 @@ export type SavedSearchFindUniqueArgs<ExtArgs extends runtime.Types.Extensions.I
    */
   omit?: Prisma.SavedSearchOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchInclude<ExtArgs> | null
+  /**
    * Filter, which SavedSearch to fetch.
    */
   where: Prisma.SavedSearchWhereUniqueInput
@@ -807,6 +1041,10 @@ export type SavedSearchFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.Exten
    */
   omit?: Prisma.SavedSearchOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchInclude<ExtArgs> | null
+  /**
    * Filter, which SavedSearch to fetch.
    */
   where: Prisma.SavedSearchWhereUniqueInput
@@ -824,6 +1062,10 @@ export type SavedSearchFindFirstArgs<ExtArgs extends runtime.Types.Extensions.In
    * Omit specific fields from the SavedSearch
    */
   omit?: Prisma.SavedSearchOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchInclude<ExtArgs> | null
   /**
    * Filter, which SavedSearch to fetch.
    */
@@ -873,6 +1115,10 @@ export type SavedSearchFindFirstOrThrowArgs<ExtArgs extends runtime.Types.Extens
    */
   omit?: Prisma.SavedSearchOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchInclude<ExtArgs> | null
+  /**
    * Filter, which SavedSearch to fetch.
    */
   where?: Prisma.SavedSearchWhereInput
@@ -920,6 +1166,10 @@ export type SavedSearchFindManyArgs<ExtArgs extends runtime.Types.Extensions.Int
    * Omit specific fields from the SavedSearch
    */
   omit?: Prisma.SavedSearchOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchInclude<ExtArgs> | null
   /**
    * Filter, which SavedSearches to fetch.
    */
@@ -969,6 +1219,10 @@ export type SavedSearchCreateArgs<ExtArgs extends runtime.Types.Extensions.Inter
    */
   omit?: Prisma.SavedSearchOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchInclude<ExtArgs> | null
+  /**
    * The data needed to create a SavedSearch.
    */
   data: Prisma.XOR<Prisma.SavedSearchCreateInput, Prisma.SavedSearchUncheckedCreateInput>
@@ -1002,6 +1256,10 @@ export type SavedSearchCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Ext
    */
   data: Prisma.SavedSearchCreateManyInput | Prisma.SavedSearchCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1016,6 +1274,10 @@ export type SavedSearchUpdateArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Omit specific fields from the SavedSearch
    */
   omit?: Prisma.SavedSearchOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchInclude<ExtArgs> | null
   /**
    * The data needed to update a SavedSearch.
    */
@@ -1068,6 +1330,10 @@ export type SavedSearchUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Ext
    * Limit how many SavedSearches to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1082,6 +1348,10 @@ export type SavedSearchUpsertArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Omit specific fields from the SavedSearch
    */
   omit?: Prisma.SavedSearchOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchInclude<ExtArgs> | null
   /**
    * The filter to search for the SavedSearch to update in case it exists.
    */
@@ -1109,6 +1379,10 @@ export type SavedSearchDeleteArgs<ExtArgs extends runtime.Types.Extensions.Inter
    */
   omit?: Prisma.SavedSearchOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchInclude<ExtArgs> | null
+  /**
    * Filter which SavedSearch to delete.
    */
   where: Prisma.SavedSearchWhereUniqueInput
@@ -1129,6 +1403,25 @@ export type SavedSearchDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.I
 }
 
 /**
+ * SavedSearch.user
+ */
+export type SavedSearch$userArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
+}
+
+/**
  * SavedSearch without action
  */
 export type SavedSearchDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1140,4 +1433,8 @@ export type SavedSearchDefaultArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * Omit specific fields from the SavedSearch
    */
   omit?: Prisma.SavedSearchOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchInclude<ExtArgs> | null
 }

@@ -32,3 +32,53 @@ export type SearchCache = Prisma.SearchCacheModel
  * 
  */
 export type SavedSearch = Prisma.SavedSearchModel
+/**
+ * Model JobInteraction
+ * 
+ */
+export type JobInteraction = Prisma.JobInteractionModel
+/**
+ * Model HiddenCompany
+ * 
+ */
+export type HiddenCompany = Prisma.HiddenCompanyModel
+/**
+ * Model FeedbackEvent
+ * 
+ */
+export type FeedbackEvent = Prisma.FeedbackEventModel
+/**
+ * Model User
+ * 
+ */
+export type User = Prisma.UserModel
+/**
+ * Model Account
+ * 
+ */
+export type Account = Prisma.AccountModel
+/**
+ * Model Session
+ * 
+ */
+export type Session = Prisma.SessionModel
+/**
+ * Model VerificationToken
+ * 
+ */
+export type VerificationToken = Prisma.VerificationTokenModel
+/**
+ * Model TransferCode
+ * 
+ */
+export type TransferCode = Prisma.TransferCodeModel
+/**
+ * Model EvalRun
+ * 
+ */
+export type EvalRun = Prisma.EvalRunModel
+/**
+ * Model EventLog
+ * 
+ */
+export type EventLog = Prisma.EventLogModel

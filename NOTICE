@@ -1,0 +1,27 @@
+OpenRoleKB
+Copyright 2026 OpenRoleKB Contributors
+
+This product includes software developed by the OpenRoleKB community.
+
+Licensed under the Apache License, Version 2.0 (the "License").
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+This product depends on third-party software:
+
+- Next.js                 (MIT)         https://github.com/vercel/next.js
+- React                   (MIT)         https://github.com/facebook/react
+- Prisma                  (Apache-2.0)  https://github.com/prisma/prisma
+- Tailwind CSS            (MIT)         https://github.com/tailwindlabs/tailwindcss
+- exa-js                  (MIT)         https://github.com/exa-labs/exa-js
+- openai                  (Apache-2.0)  https://github.com/openai/openai-node
+- Auth.js (next-auth)     (ISC)         https://github.com/nextauthjs/next-auth
+- @upstash/redis          (MIT)         https://github.com/upstash/upstash-redis
+- @upstash/ratelimit      (MIT)         https://github.com/upstash/ratelimit
+- @sentry/nextjs          (MIT)         https://github.com/getsentry/sentry-javascript
+- lucide-react            (ISC)         https://github.com/lucide-icons/lucide
+- resend                  (MIT)         https://github.com/resend/resend-node
+- vitest                  (MIT)         https://github.com/vitest-dev/vitest
+
+See package.json and package-lock.json for the complete dependency tree.

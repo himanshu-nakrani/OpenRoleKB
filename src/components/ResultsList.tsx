@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ResultRow } from "@/components/ResultRow";
-import { Skeleton } from "@/components/Skeleton";
+import { LoadingNarrative } from "@/components/LoadingNarrative";
 import { extractCompany } from "@/lib/company";
 import type { ExaResult, RerankItem } from "@/types/job";
 
@@ -32,10 +32,17 @@ export function ResultsList({
   const [visibleCount, setVisibleCount] = useState(25);
   const [sortMode, setSortMode] = useState<"match" | "newest">("match");
 
-  // Reset visible count when results change
-  useEffect(() => {
+  // Reset visibleCount when the results identity changes. React's official
+  // pattern for "derive state from a prop change" — set during render rather
+  // than in an effect, which avoids a wasted re-render and satisfies
+  // react-hooks/set-state-in-effect.
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [prevResultsKey, setPrevResultsKey] = useState<string>("");
+  const resultsKey = `${exaResults.length}:${reranked.length}`;
+  if (resultsKey !== prevResultsKey) {
+    setPrevResultsKey(resultsKey);
     setVisibleCount(25);
-  }, [exaResults, reranked]);
+  }
 
   const results = useMemo<MergedResult[]>(() => {
     let merged: MergedResult[];
@@ -85,21 +92,43 @@ export function ResultsList({
   }, [visible, selectedIdx, onSelect]);
 
   if (loading && exaResults.length === 0) {
+    return <LoadingNarrative hasPartialResults={false} />;
+  }
+
+  if (!loading && results.length === 0) {
+    const examples = [
+      "senior react, remote EU, no crypto",
+      "junior product manager, fintech, New York",
+      "staff data engineer with dbt, Snowflake",
+    ];
+    function rerun(q: string) {
+      const input = document.querySelector<HTMLInputElement>('[data-ask-bar]');
+      if (!input) return;
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+      setter?.call(input, q);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.closest("form")?.requestSubmit();
+    }
     return (
-      <div className="space-y-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-[76px] w-full" />
-        ))}
+      <div className="text-center py-12 px-4 animate-fade-in">
+        <p className="text-body text-ink">No matches for that exact ask.</p>
+        <p className="text-small text-muted mt-2">
+          Try broader terms, fewer filters, or one of these:
+        </p>
+        <div className="flex flex-wrap justify-center gap-2 mt-4">
+          {examples.map((q) => (
+            <button
+              key={q}
+              onClick={() => rerun(q)}
+              className="px-3 py-1.5 text-micro rounded-full border border-border text-muted hover:text-ink-soft hover:border-border-strong hover:bg-surface-2 transition-all duration-120"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
       </div>
     );
   }
-
-  if (!loading && results.length === 0) return (
-    <div className="text-center py-12 px-4 animate-fade-in">
-      <p className="text-body text-ink-soft">No matches found for your search.</p>
-      <p className="text-small text-muted mt-2">Try broader terms, fewer filters, or a different phrasing.</p>
-    </div>
-  );
 
   return (
     <div>

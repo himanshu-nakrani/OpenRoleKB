@@ -6,10 +6,11 @@
 
 **Find a role you'll love — described in plain English.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![CI](https://github.com/himanshu-nakrani/OpenRoleKB/actions/workflows/ci.yml/badge.svg)](https://github.com/himanshu-nakrani/OpenRoleKB/actions/workflows/ci.yml)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-61%20passed-green)]()
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
 </div>
 
@@ -20,7 +21,7 @@ OpenRoleKB is an open-source, AI-powered job search engine. Type a sentence abou
 ## Features
 
 - **Natural language querying** — DeepSeek extracts structured filters (role, seniority, skills, location, salary, remote preference, exclusions, freshness) from whatever you type
-- **Live neural search** — Exa crawls ATS career pages across greenhouse.io, lever.co, ashbyhq.com, and 7 other hosts in real time
+- **Live neural search** — Exa crawls ATS career pages across greenhouse.io, lever.co, ashbyhq.com, workable, workday, smartrecruiters, bamboohr, recruitee, personio, teamtailor in real time
 - **LLM reranking** — Every result is scored 0–100 against your full query; sub-40% matches are filtered out
 - **6-hour caching** — Repeat queries skip the Exa + DeepSeek round trip
 - **Anonymous-first** — No account required. Saved searches persist by browser ID. Sign in to sync across devices.
@@ -224,22 +225,29 @@ Tests cover:
 
 ## Contributing
 
-Contributions are welcome. Areas that could use help:
+We welcome contributions of any size. Before opening a PR, please read:
 
-- **ATS parsers** — Add company extraction for new ATS hosts in `src/lib/company.ts`
-- **Search quality** — Improve the LLM rerank rubric or query parsing prompts
-- **Client-side UX** — Virtual scroll improvements, accessibility, animations
-- **Observability** — Instrumentation, dashboards, alerting
-- **Multilingual** — i18n for the UI and non-English query support
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — dev setup, workflow, PR process
+- [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) — Contributor Covenant 2.1
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — codebase map for new contributors
+- [SECURITY.md](./SECURITY.md) — how to disclose vulnerabilities
 
-Before opening a PR:
-1. Run `npm test` and make sure all tests pass
-2. Run `npm run lint` and fix any issues
-3. Add tests for new behavior
+**Good first issues** are tagged [`good first issue`](https://github.com/himanshu-nakrani/OpenRoleKB/labels/good%20first%20issue).
+**Larger features** are tagged [`help wanted`](https://github.com/himanshu-nakrani/OpenRoleKB/labels/help%20wanted).
+
+Areas where help is especially welcome:
+
+- **ATS parsers** — add company extraction for more hosts in `src/lib/company.ts`
+- **Search quality** — improve the rerank rubric or query-parsing prompts
+- **Accessibility** — keyboard navigation, screen-reader polish, contrast audits
+- **Observability** — instrumentation, dashboards, alerting
+- **i18n** — non-English UI and query support
 
 ## License
 
-MIT © OpenRoleKB
+Licensed under the [Apache License 2.0](./LICENSE).
+
+Copyright © 2026 OpenRoleKB Contributors.
 
 ## Acknowledgements
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { Search, CornerDownLeft, X } from "lucide-react";
 import type { Filters, ExaResult, RerankItem } from "@/types/job";
 
@@ -37,6 +37,7 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
   });
   const stateRef = useRef(state);
   stateRef.current = state;
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (focused) return;
@@ -75,6 +76,9 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
     const q = query.trim();
     if (!q) return;
 
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
     setSaved(false);
     const newState: SearchState = {
       phase: "loading",
@@ -93,7 +97,8 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
           "Content-Type": "application/json",
           "x-anon-id": anonId,
         },
-        body: JSON.stringify({ query: q }),
+        body: JSON.stringify({ query: q, filters }),
+        signal: abortRef.current.signal,
       });
 
       if (!res.ok) {
@@ -162,7 +167,7 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
   async function handleSave() {
     try {
       const anonId = getAnonId();
-      await fetch("/api/saved", {
+      const res = await fetch("/api/saved", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -170,9 +175,15 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
         },
         body: JSON.stringify({ rawQuery: query.trim(), filters: state.filters }),
       });
+      if (!res.ok) {
+        setState((s) => ({ ...s, error: "Couldn't save this search." }));
+        return;
+      }
       setSaved(true);
       window.dispatchEvent(new CustomEvent("openrolekb:saved-changed"));
-    } catch {}
+    } catch {
+      setState((s) => ({ ...s, error: "Network error while saving." }));
+    }
   }
 
   function handleDropFilter(key: keyof Filters, value?: string) {
@@ -255,8 +266,8 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
       )}
 
       {state.error && (
-        <div className="mt-4 p-4 border-l-[3px] border-l-danger bg-surface rounded-r-lg text-small text-ink-soft animate-fade-in">
-          <p className="font-medium text-ink">Couldn&apos;t reach the search service.</p>
+        <div role="alert" className="mt-4 p-4 border-l-[3px] border-l-danger bg-surface rounded-r-lg text-small text-ink-soft animate-fade-in">
+          <p className="font-medium text-ink">Search hit a snag.</p>
           <p className="mt-1">{state.error}</p>
           <button
             onClick={() => runSearch()}
@@ -331,17 +342,23 @@ const EXAMPLES = [
 
 function ExampleQueries() {
   const key = "openrolekb_examples_seen";
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (sessionStorage.getItem(key) === null) {
-      setVisible(true);
-    }
-  }, []);
+  // useSyncExternalStore is React's answer to reading browser-only state
+  // during render without hydration mismatches. SSR returns false so the
+  // server-rendered HTML is stable; the client snapshot reads sessionStorage.
+  const visible = useSyncExternalStore(
+    (cb) => {
+      window.addEventListener("storage", cb);
+      return () => window.removeEventListener("storage", cb);
+    },
+    () => sessionStorage.getItem(key) === null,
+    () => false,
+  );
 
   function handleClick(query: string) {
     sessionStorage.setItem(key, "1");
-    setVisible(false);
+    // storage events don't fire in the same tab; dispatch manually so the
+    // useSyncExternalStore subscription re-reads and hides this widget.
+    window.dispatchEvent(new StorageEvent("storage", { key }));
     const input = document.querySelector<HTMLInputElement>('[data-ask-bar]');
     if (input) {
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;

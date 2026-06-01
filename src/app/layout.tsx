@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import Script from "next/script";
 import { Geist, Geist_Mono, Fraunces } from "next/font/google";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { AppHeader } from "@/components/AppHeader";
+import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,9 +20,30 @@ const fraunces = Fraunces({
   axes: ["opsz"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openrolekb.example.com";
+
 export const metadata: Metadata = {
-  title: "OpenRoleKB — Natural Language Job Search",
-  description: "Search for jobs using natural language. Find the right role with AI-powered matching.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "OpenRoleKB — Natural-language job search",
+    template: "%s · OpenRoleKB",
+  },
+  description:
+    "Describe the role you want in plain English. Neural search across real ATS sources, AI-ranked against your exact ask.",
+  openGraph: {
+    title: "OpenRoleKB — Natural-language job search",
+    description: "Neural search · AI ranked · Real ATS sources.",
+    url: SITE_URL,
+    siteName: "OpenRoleKB",
+    images: [{ url: "/api/og", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "OpenRoleKB",
+    description: "Neural search · AI ranked · Real ATS sources.",
+    images: ["/api/og"],
+  },
 };
 
 export default function RootLayout({
@@ -45,26 +65,16 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full bg-bg text-ink">
-        <header className="sticky top-0 z-40 backdrop-blur bg-bg/90 border-b border-border">
-          <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-ink no-underline hover:opacity-80 transition-opacity"
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-accent" />
-              <span
-                className="text-[1.625rem] font-medium tracking-tight"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                OpenRole<span className="text-accent">KB</span>
-              </span>
-            </Link>
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-            </div>
-          </div>
-        </header>
-        <main className="flex-1 px-4 py-8">{children}</main>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-accent-dark focus:text-accent-text focus:rounded-full"
+        >
+          Skip to search
+        </a>
+        <Providers>
+          <AppHeader />
+          <main id="main-content" className="flex-1 px-4 py-8">{children}</main>
+        </Providers>
       </body>
     </html>
   );

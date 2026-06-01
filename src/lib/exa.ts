@@ -6,15 +6,12 @@ const ATS_DOMAINS = [
   "lever.co",
   "ashbyhq.com",
   "workable.com",
-  "linkedin.com",
-  "indeed.com",
-  "glassdoor.com",
-  "ziprecruiter.com",
-  "wellfound.com",
-  "builtin.com",
-  "dice.com",
-  "simplify.jobs",
-  "otta.com",
+  "myworkdayjobs.com",
+  "smartrecruiters.com",
+  "bamboohr.com",
+  "recruitee.com",
+  "personio.de",
+  "teamtailor.com",
 ];
 
 let exaClient: Exa | null = null;
@@ -47,19 +44,23 @@ function buildQueryString(filters: Filters): string {
   return parts.join(" ");
 }
 
-export async function searchJobs(query: string, filters: Filters): Promise<ExaResult[]> {
+export async function searchJobs(
+  query: string,
+  filters: Filters,
+  signal?: AbortSignal,
+): Promise<ExaResult[]> {
   const exa = getExa();
   const queryStr = buildQueryString(filters);
 
   const params: Record<string, unknown> = {
-    numResults: 25,
+    numResults: 50,
     type: "neural",
-    category: "job posting",
     contents: {
       text: { maxCharacters: 2000 },
       highlights: { numSentences: 3 },
     },
     includeDomains: ATS_DOMAINS,
+    userLocation: "US",
   };
 
   if (filters.freshnessDays && filters.freshnessDays > 0) {
@@ -69,7 +70,7 @@ export async function searchJobs(query: string, filters: Filters): Promise<ExaRe
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const response = await exa.searchAndContents(queryStr, params as any);
+  const response = await exa.searchAndContents(queryStr, { ...params, signal } as any);
 
   if (!response.results?.length) return [];
 
