@@ -1,10 +1,33 @@
 import { prisma } from "@/lib/prisma";
 import { hashQuery } from "@/lib/hash";
 import { extractCompany } from "@/lib/company";
+import { extractLocation } from "@/lib/location";
 import type { Filters, ExaResult } from "@/types/job";
 import type { Prisma } from "../../generated/prisma/client";
 
 const CACHE_TTL_HOURS = 6;
+
+type CachedJob = {
+  id: string;
+  title: string;
+  url: string;
+  text: string;
+  highlights: string[];
+  publishedDate?: string;
+  author?: string;
+};
+
+function adaptToExaShape(j: { id: string; title: string; url: string; description: string | null; publishedAt: Date | null }): CachedJob {
+  return {
+    id: j.id,
+    title: j.title,
+    url: j.url,
+    text: j.description ?? "",
+    highlights: [],
+    publishedDate: j.publishedAt?.toISOString(),
+    author: undefined,
+  };
+}
 
 export async function getCachedSearch(rawQuery: string, filters: Filters) {
   const queryHash = hashQuery(rawQuery, filters);
@@ -22,9 +45,14 @@ export async function getCachedSearch(rawQuery: string, filters: Filters) {
 
   const jobMap = new Map(jobs.map((j) => [j.id, j]));
 
+  const ordered = cached.resultJobIds
+    .map((id) => jobMap.get(id))
+    .filter((j): j is NonNullable<typeof j> => Boolean(j));
+
   return {
     cache: cached,
-    jobs: cached.resultJobIds.map((id) => jobMap.get(id)).filter(Boolean),
+    jobs: ordered.map(adaptToExaShape),
+    resultJobIds: ordered.map((j) => j.id),
   };
 }
 
@@ -35,16 +63,17 @@ export async function cacheSearch(
   rerankScores: Record<string, { score: number; fit: string }>,
 ): Promise<string> {
   const queryHash = hashQuery(rawQuery, filters);
-  const jobIds: string[] = [];
 
-  for (const r of results) {
-    const job = await prisma.job.upsert({
+  const jobPromises = results.map(async (r) => {
+    const { location, isRemote } = r.text ? extractLocation(r.text) : { location: null, isRemote: false };
+    return prisma.job.upsert({
       where: { url: r.url },
       create: {
         url: r.url,
         title: r.title,
         company: extractCompany(r.url),
-        location: null,
+        location,
+        isRemote,
         description: r.text,
         publishedAt: r.publishedDate ? new Date(r.publishedDate) : null,
         source: new URL(r.url).hostname,
@@ -54,11 +83,12 @@ export async function cacheSearch(
         company: extractCompany(r.url),
         description: r.text,
         publishedAt: r.publishedDate ? new Date(r.publishedDate) : null,
-        lastSeenAt: new Date(),
       },
     });
-    jobIds.push(job.id);
-  }
+  });
+
+  const upsertedJobs = await Promise.all(jobPromises);
+  const jobIds = upsertedJobs.map((j) => j.id);
 
   const cache = await prisma.searchCache.upsert({
     where: { queryHash },

@@ -1,14 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rate-limit";
+import { getOwnerIdentity, type OwnerIdentity } from "@/lib/owner";
+import { hashQuery } from "@/lib/hash";
+import { sanitizeFilters } from "@/lib/parse-query";
+import type { Prisma } from "../../../../generated/prisma/client";
+
+function identityFilter(identity: OwnerIdentity) {
+  return identity.kind === "user"
+    ? { userId: identity.key }
+    : { anonId: identity.key };
+}
 
 export async function GET(request: NextRequest) {
-  const anonId = request.headers.get("x-anon-id");
-  if (!anonId) {
+  const identity = await getOwnerIdentity(request);
+  const { ok } = await rateLimit(request, identity?.key);
+  if (!ok) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+  }
+
+  if (!identity) {
     return NextResponse.json({ error: "x-anon-id header required" }, { status: 400 });
   }
 
   const saved = await prisma.savedSearch.findMany({
-    where: { anonId },
+    where: identityFilter(identity),
     orderBy: { createdAt: "desc" },
     take: 50,
   });
@@ -17,32 +33,56 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const anonId = request.headers.get("x-anon-id");
-  if (!anonId) {
+  const identity = await getOwnerIdentity(request);
+  const { ok } = await rateLimit(request, identity?.key);
+  if (!ok) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+  }
+
+  if (!identity) {
     return NextResponse.json({ error: "x-anon-id header required" }, { status: 400 });
   }
 
   const body = await request.json();
-  const { rawQuery, filters } = body;
+  const { rawQuery, filters: rawFilters } = body;
 
-  if (!rawQuery) {
+  if (!rawQuery || typeof rawQuery !== "string") {
     return NextResponse.json({ error: "rawQuery required" }, { status: 400 });
   }
 
-  const saved = await prisma.savedSearch.create({
-    data: {
-      anonId,
-      rawQuery,
-      filters: filters || {},
-    },
+  if (rawQuery.length > 1000) {
+    return NextResponse.json({ error: "query too long" }, { status: 400 });
+  }
+
+  const filters = rawFilters ? sanitizeFilters(rawFilters) : {};
+  const queryHash = hashQuery(rawQuery, filters);
+  const filtersJson = filters as Prisma.InputJsonValue;
+
+  const where = identity.kind === "user"
+    ? { userId_queryHash: { userId: identity.key, queryHash } }
+    : { anonId_queryHash: { anonId: identity.key, queryHash } };
+
+  const data = identity.kind === "user"
+    ? { userId: identity.key, rawQuery, filters: filtersJson, queryHash }
+    : { anonId: identity.key, rawQuery, filters: filtersJson, queryHash };
+
+  const saved = await prisma.savedSearch.upsert({
+    where,
+    create: data,
+    update: { rawQuery, filters: filtersJson },
   });
 
-  return NextResponse.json(saved, { status: 201 });
+  return NextResponse.json(saved);
 }
 
 export async function DELETE(request: NextRequest) {
-  const anonId = request.headers.get("x-anon-id");
-  if (!anonId) {
+  const identity = await getOwnerIdentity(request);
+  const { ok } = await rateLimit(request, identity?.key);
+  if (!ok) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+  }
+
+  if (!identity) {
     return NextResponse.json({ error: "x-anon-id header required" }, { status: 400 });
   }
 
@@ -53,13 +93,13 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "id param required" }, { status: 400 });
   }
 
-  const saved = await prisma.savedSearch.findUnique({ where: { id } });
+  const { count } = await prisma.savedSearch.deleteMany({
+    where: { id, ...identityFilter(identity) },
+  });
 
-  if (!saved || saved.anonId !== anonId) {
+  if (count === 0) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-
-  await prisma.savedSearch.delete({ where: { id } });
 
   return NextResponse.json({ deleted: true });
 }
