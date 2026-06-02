@@ -35,19 +35,36 @@ model SearchCache {
 }
 
 model SavedSearch {
-  id        String   @id @default(cuid())
-  anonId    String?
-  userId    String?
-  queryHash String
-  rawQuery  String
-  filters   Json
-  createdAt DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String          @id @default(cuid())
+  anonId          String?
+  userId          String?
+  queryHash       String
+  rawQuery        String
+  filters         Json
+  cadence         String          @default("off")
+  lastRunAt       DateTime?
+  lastNotifiedAt  DateTime?
+  notifyEmail     String?
+  createdAt       DateTime        @default(now())
+  user            User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs            SavedSearchRun[]
 
   @@index([anonId])
   @@index([userId])
+  @@index([cadence, lastRunAt])
   @@unique([userId, queryHash])
   @@unique([anonId, queryHash])
+}
+
+model SavedSearchRun {
+  id            String    @id @default(cuid())
+  savedSearchId String
+  newJobIds     String[]
+  deltaCount    Int
+  createdAt     DateTime  @default(now())
+  savedSearch   SavedSearch @relation(fields: [savedSearchId], references: [id], onDelete: Cascade)
+
+  @@index([savedSearchId, createdAt])
 }
 
 model JobInteraction {

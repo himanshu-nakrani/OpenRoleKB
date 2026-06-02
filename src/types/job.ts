@@ -17,6 +17,12 @@ export interface ExaResult {
   highlights: string[];
   publishedDate?: string;
   author?: string;
+  /**
+   * Last time we observed this job in any search result. Populated only on
+   * cache-hit (`adaptToExaShape`); undefined for fresh-from-Exa rows because
+   * we haven't written/refreshed the Job row yet. Used by StillListedBadge.
+   */
+  lastSeenAt?: string;
 }
 
 export interface RerankItem {

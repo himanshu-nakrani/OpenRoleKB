@@ -54,6 +54,7 @@ export const ModelName = {
   Job: 'Job',
   SearchCache: 'SearchCache',
   SavedSearch: 'SavedSearch',
+  SavedSearchRun: 'SavedSearchRun',
   JobInteraction: 'JobInteraction',
   HiddenCompany: 'HiddenCompany',
   FeedbackEvent: 'FeedbackEvent',
@@ -119,10 +120,25 @@ export const SavedSearchScalarFieldEnum = {
   queryHash: 'queryHash',
   rawQuery: 'rawQuery',
   filters: 'filters',
+  cadence: 'cadence',
+  lastRunAt: 'lastRunAt',
+  lastNotifiedAt: 'lastNotifiedAt',
+  notifyEmail: 'notifyEmail',
   createdAt: 'createdAt'
 } as const
 
 export type SavedSearchScalarFieldEnum = (typeof SavedSearchScalarFieldEnum)[keyof typeof SavedSearchScalarFieldEnum]
+
+
+export const SavedSearchRunScalarFieldEnum = {
+  id: 'id',
+  savedSearchId: 'savedSearchId',
+  newJobIds: 'newJobIds',
+  deltaCount: 'deltaCount',
+  createdAt: 'createdAt'
+} as const
+
+export type SavedSearchRunScalarFieldEnum = (typeof SavedSearchRunScalarFieldEnum)[keyof typeof SavedSearchRunScalarFieldEnum]
 
 
 export const JobInteractionScalarFieldEnum = {

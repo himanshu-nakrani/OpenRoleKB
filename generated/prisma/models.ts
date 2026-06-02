@@ -11,6 +11,7 @@
 export type * from './models/Job'
 export type * from './models/SearchCache'
 export type * from './models/SavedSearch'
+export type * from './models/SavedSearchRun'
 export type * from './models/JobInteraction'
 export type * from './models/HiddenCompany'
 export type * from './models/FeedbackEvent'

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { ScoreChip } from "@/components/ScoreChip";
-import { relativeTime } from "@/lib/time";
+import { FreshnessPill } from "@/components/FreshnessPill";
 
 interface ResultRowProps {
   title: string;
@@ -38,9 +38,9 @@ export function ResultRow({
     try { return new URL(url).hostname.replace("www.", ""); } catch { return null; }
   })();
 
-  const meta = [company, domain, publishedDate ? relativeTime(publishedDate) : null]
-    .filter(Boolean)
-    .join(" · ");
+  // Posting date is promoted out of the meta line into a colored pill below.
+  // Meta line now carries only the always-truthy company + domain bits.
+  const meta = [company, domain].filter(Boolean).join(" · ");
 
   const showScore = score !== undefined && score >= 0.4;
 
@@ -60,6 +60,11 @@ export function ResultRow({
         <div className="flex-1 min-w-0">
           <p className="text-body font-medium text-ink truncate">{title}</p>
           <p className="text-small text-ink-soft truncate mt-1">{meta}</p>
+          {publishedDate && (
+            <div className="mt-1.5">
+              <FreshnessPill publishedDate={publishedDate} compact />
+            </div>
+          )}
         </div>
         {showScore && (
           <ScoreChip score={score} className="shrink-0 mt-1" />

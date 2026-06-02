@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { ResultRow } from "@/components/ResultRow";
 import { LoadingNarrative } from "@/components/LoadingNarrative";
+import { isWithinDays } from "@/components/FreshnessPill";
 import { extractCompany } from "@/lib/company";
 import type { ExaResult, RerankItem } from "@/types/job";
 
@@ -31,6 +32,7 @@ export function ResultsList({
 }: ResultsListProps) {
   const [visibleCount, setVisibleCount] = useState(25);
   const [sortMode, setSortMode] = useState<"match" | "newest">("match");
+  const [freshOnly, setFreshOnly] = useState(false);
 
   // Reset visibleCount when the results identity changes. React's official
   // pattern for "derive state from a prop change" — set during render rather
@@ -52,6 +54,12 @@ export function ResultsList({
       merged = exaResults.map((r, i) => ({ ...r, score: undefined, fit: undefined, originalIdx: i }));
     }
 
+    if (freshOnly) {
+      // "This week" means < 7 days old AND has a publishedDate. Rows with
+      // no date are excluded — we can't prove freshness so we don't claim it.
+      merged = merged.filter((r) => isWithinDays(r.publishedDate, 7));
+    }
+
     if (sortMode === "newest") {
       merged = [...merged].sort((a, b) => {
         if (!a.publishedDate && !b.publishedDate) return 0;
@@ -62,7 +70,7 @@ export function ResultsList({
     }
 
     return merged;
-  }, [exaResults, reranked, sortMode]);
+  }, [exaResults, reranked, sortMode, freshOnly]);
 
   const visible = useMemo(() => results.slice(0, visibleCount), [results, visibleCount]);
 
@@ -132,8 +140,8 @@ export function ResultsList({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setSortMode(sortMode === "match" ? "newest" : "match")}
             className="text-micro text-muted hover:text-ink transition-all duration-120 flex items-center gap-1.5"
@@ -143,8 +151,24 @@ export function ResultsList({
               <path d="M1 0.5l4 5 4-5" stroke="currentColor" fill="none" strokeWidth="1.5" />
             </svg>
           </button>
+          <button
+            onClick={() => setFreshOnly((v) => !v)}
+            aria-pressed={freshOnly}
+            title="Show only roles posted in the last 7 days"
+            className={`text-micro inline-flex items-center gap-1 px-2 py-0.5 rounded-full border transition-all duration-120 ${
+              freshOnly
+                ? "bg-success/12 text-success border-success/30"
+                : "bg-transparent text-muted border-border hover:text-ink hover:border-border-strong"
+            }`}
+          >
+            <span
+              aria-hidden
+              className={`w-1.5 h-1.5 rounded-full ${freshOnly ? "bg-success" : "bg-ink-soft/30"}`}
+            />
+            This week
+          </button>
         </div>
-        <span className="text-micro text-muted">{results.length} results</span>
+        <span className="text-micro text-muted whitespace-nowrap">{results.length} results</span>
       </div>
 
       <div role="listbox" aria-label="Search results" className="space-y-2">

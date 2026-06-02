@@ -15,9 +15,17 @@ type CachedJob = {
   highlights: string[];
   publishedDate?: string;
   author?: string;
+  lastSeenAt?: string;
 };
 
-function adaptToExaShape(j: { id: string; title: string; url: string; description: string | null; publishedAt: Date | null }): CachedJob {
+function adaptToExaShape(j: {
+  id: string;
+  title: string;
+  url: string;
+  description: string | null;
+  publishedAt: Date | null;
+  lastSeenAt: Date;
+}): CachedJob {
   return {
     id: j.id,
     title: j.title,
@@ -26,6 +34,7 @@ function adaptToExaShape(j: { id: string; title: string; url: string; descriptio
     highlights: [],
     publishedDate: j.publishedAt?.toISOString(),
     author: undefined,
+    lastSeenAt: j.lastSeenAt.toISOString(),
   };
 }
 

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { ScoreChip } from "@/components/ScoreChip";
+import { FreshnessPill } from "@/components/FreshnessPill";
+import { StillListedBadge } from "@/components/StillListedBadge";
 import dynamic from "next/dynamic";
 const FeedbackModal = dynamic(
   () => import("@/components/FeedbackModal").then((m) => m.FeedbackModal),
@@ -65,18 +67,18 @@ export function DetailPane({ exaResults, reranked, selectedIdx }: DetailPaneProp
   })();
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div>
       <div className="max-w-[65ch] mx-auto">
       <div className="sticky top-0 bg-surface/95 backdrop-blur-sm z-10 pb-3 border-b border-border mb-6">
         <h2 className="text-h2 font-medium leading-snug font-display-opsz-h2">
           {job.title}
         </h2>
         <div className="flex flex-wrap items-center gap-2 text-small text-muted mt-2">
-          {[extractCompany(job.url) || job.author, job.publishedDate ? relativeDate(job.publishedDate) : null]
-            .filter(Boolean)
-            .map((s, i) => (
-              <span key={i}>{s}{i === 0 && job.publishedDate ? " · " : ""}</span>
-            ))}
+          {(extractCompany(job.url) || job.author) && (
+            <span>{extractCompany(job.url) || job.author}</span>
+          )}
+          {job.publishedDate && <FreshnessPill publishedDate={job.publishedDate} />}
+          {job.lastSeenAt && <StillListedBadge lastSeenAt={job.lastSeenAt} publishedDate={job.publishedDate} />}
         </div>
         <div className="flex items-center gap-4 mt-4 flex-wrap">
           <a
@@ -126,17 +128,6 @@ export function DetailPane({ exaResults, reranked, selectedIdx }: DetailPaneProp
       </div>
     </div>
   );
-}
-
-function relativeDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return "today";
-  if (diffDays === 1) return "1 day ago";
-  if (diffDays < 30) return diffDays + " days ago";
-  if (diffDays < 365) return Math.floor(diffDays / 30) + " months ago";
-  return Math.floor(diffDays / 365) + " years ago";
 }
 
 const BULLET_RX = /^\s*(?:[*\-•◦▪●·‣⁃]|\d+[.)])\s+/;

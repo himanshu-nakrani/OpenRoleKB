@@ -33,6 +33,11 @@ export type SearchCache = Prisma.SearchCacheModel
  */
 export type SavedSearch = Prisma.SavedSearchModel
 /**
+ * Model SavedSearchRun
+ * 
+ */
+export type SavedSearchRun = Prisma.SavedSearchRunModel
+/**
  * Model JobInteraction
  * 
  */

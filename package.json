@@ -20,6 +20,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:contract": "RUN_CONTRACT=1 vitest run src/app/api/search/__tests__/contract.test.ts",
     "eval": "tsx scripts/eval.ts",
     "eval:dry": "tsx scripts/eval.ts --dry-run --no-write",
     "eval:snapshot": "tsx scripts/eval-snapshot.ts"
@@ -31,6 +32,8 @@
     "@sentry/nextjs": "^10.55.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
+    "@vercel/analytics": "^1.6.1",
+    "@vercel/speed-insights": "^1.3.1",
     "dotenv": "^17.4.2",
     "exa-js": "^2.13.0",
     "lucide-react": "^1.17.0",
@@ -44,6 +47,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testcontainers/postgresql": "^12.0.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -51,6 +55,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
+    "testcontainers": "^10.28.0",
     "tsx": "^4.22.4",
     "typescript": "^5",
     "vitest": "^4.1.7"

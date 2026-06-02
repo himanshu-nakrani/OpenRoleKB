@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono, Fraunces } from "next/font/google";
 import { AppHeader } from "@/components/AppHeader";
 import { Providers } from "@/components/Providers";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -74,7 +77,19 @@ export default function RootLayout({
         <Providers>
           <AppHeader />
           <main id="main-content" className="flex-1 px-4 py-8">{children}</main>
+          <footer className="border-t border-border py-8 px-4 mt-auto">
+            <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-micro text-muted">
+              <p>© {new Date().getFullYear()} OpenRoleKB. All rights reserved.</p>
+              <div className="flex items-center gap-4">
+                <Link href="/about" className="hover:text-ink transition-colors">About</Link>
+                <Link href="/privacy" className="hover:text-ink transition-colors">Privacy</Link>
+                <Link href="/terms" className="hover:text-ink transition-colors">Terms</Link>
+              </div>
+            </div>
+          </footer>
         </Providers>
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
