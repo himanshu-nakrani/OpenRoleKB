@@ -1,5 +1,6 @@
 import Exa from "exa-js";
 import type { Filters, ExaResult } from "@/types/job";
+import { EXA_NUM_RESULTS } from "@/lib/config";
 
 const ATS_DOMAINS = [
   "greenhouse.io",
@@ -30,18 +31,22 @@ function getExa(): Exa {
 function buildQueryString(filters: Filters): string {
   const parts: string[] = [];
 
-  if (filters.role) parts.push(filters.role);
+  // Better ordering and phrasing for Exa neural search (role + seniority first is usually strongest signal)
   if (filters.seniority) parts.push(filters.seniority);
-  if (filters.skills?.length) parts.push(filters.skills.join(" "));
-  if (filters.location) parts.push(filters.location);
-  if (filters.remote) parts.push("remote");
-  parts.push("job posting");
+  if (filters.role) parts.push(filters.role);
+  if (filters.skills?.length) parts.push(filters.skills.join(", "));
+  if (filters.location) parts.push(`in ${filters.location}`);
+  if (filters.remote) parts.push("remote-friendly");
+  parts.push("job posting hiring");
+
+  let q = parts.join(" ");
 
   if (filters.exclude?.length) {
-    return parts.join(" ") + " -" + filters.exclude.join(" -");
+    // Use exclusion syntax that neural search understands reasonably well
+    q += " -" + filters.exclude.map((e) => `(${e})`).join(" -");
   }
 
-  return parts.join(" ");
+  return q;
 }
 
 export async function searchJobs(
@@ -53,7 +58,7 @@ export async function searchJobs(
   const queryStr = buildQueryString(filters);
 
   const params: Record<string, unknown> = {
-    numResults: 50,
+    numResults: EXA_NUM_RESULTS,
     type: "neural",
     contents: {
       text: { maxCharacters: 2000 },

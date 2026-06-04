@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/cache-purge",
       "schedule": "5 2 * * *"
+    },
+    {
+      "path": "/api/cron/saved-search-run",
+      "schedule": "17 14 * * *"
     }
   ]
 }

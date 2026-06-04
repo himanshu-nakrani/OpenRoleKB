@@ -1,6 +1,7 @@
 import { getLLM } from "@/lib/llm";
 import type { ExaResult, RerankItem } from "@/types/job";
 import type OpenAI from "openai";
+import { RERANK_TEXT_CHARS } from "@/lib/config";
 
 const RERANK_RUBRIC = `You are a job search relevance rater. Score how well each job posting matches the user's query, considering ALL constraints (role, seniority, skills, location, remote, exclusions).
 
@@ -65,7 +66,7 @@ export async function rerankWithMetrics(
   const llm = getLLM();
 
   const resultsList = results
-    .map((r, i) => `${i}. ${r.title}\n   URL: ${r.url}\n   ${r.text.substring(0, 400)}`)
+    .map((r, i) => `${i}. ${r.title}\n   URL: ${r.url}\n   ${r.text.substring(0, RERANK_TEXT_CHARS)}`)
     .join("\n\n");
 
   const response = await llm.chat.completions.create(

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { parseQuery, sanitizeFilters } from "@/lib/parse-query";
+import { sanitizeFilters } from "@/lib/parse-query";
 import { searchJobs } from "@/lib/exa";
 import { rerankWithMetrics } from "@/lib/rerank";
 import { cacheSearch, getCachedSearch } from "@/lib/cache";
@@ -37,21 +37,23 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    for (const savedSearch of savedSearches) {
+    // Avoid re-parsing entirely for cron digest runs — use the rich filters that were
+    // captured + sanitized when the search was originally saved. This is a major cost win.
+    // (parseQuery fast-path helps interactive, but here we skip LLM completely.)
+    const processOne = async (savedSearch: (typeof savedSearches)[0], signal?: AbortSignal) => {
       try {
         const savedFilters = savedSearch.filters as Record<string, unknown>;
-        const parsed = await parseQuery(savedSearch.rawQuery);
-        const mergedFilters: Filters = { ...parsed.filters, ...sanitizeFilters(savedFilters) };
+        const mergedFilters: Filters = sanitizeFilters(savedFilters);
 
         const cached = await getCachedSearch(savedSearch.rawQuery, mergedFilters);
         let exaResults: ExaResult[] = [];
-        
+
         if (cached?.jobs?.length) {
           exaResults = cached.jobs;
         } else {
-          exaResults = await searchJobs(savedSearch.rawQuery, mergedFilters);
+          exaResults = await searchJobs(savedSearch.rawQuery, mergedFilters, signal);
           try {
-            const r = await rerankWithMetrics(savedSearch.rawQuery, exaResults);
+            const r = await rerankWithMetrics(savedSearch.rawQuery, exaResults, signal);
             const rerankScores = Object.fromEntries(
               r.items
                 .map((item) => [exaResults[item.idx]?.id, { score: item.score, fit: item.fit }] as const)
@@ -59,7 +61,7 @@ export async function POST(request: NextRequest) {
             );
             await cacheSearch(savedSearch.rawQuery, mergedFilters, exaResults, rerankScores);
           } catch {
-            // Fallback
+            // Fallback — still use exaResults for delta computation
           }
         }
 
@@ -71,8 +73,17 @@ export async function POST(request: NextRequest) {
         const previousJobIds = new Set(previousRun?.newJobIds || []);
         const currentJobIds = exaResults.map((j) => j.id);
         const newJobIds = currentJobIds.filter((id) => !previousJobIds.has(id));
+        const isFirstRun = !previousRun;
 
-        if (newJobIds.length > 0) {
+        if (isFirstRun) {
+          await prisma.savedSearchRun.create({
+            data: {
+              savedSearchId: savedSearch.id,
+              newJobIds: currentJobIds,
+              deltaCount: 0,
+            },
+          });
+        } else if (newJobIds.length > 0) {
           await prisma.savedSearchRun.create({
             data: {
               savedSearchId: savedSearch.id,
@@ -82,85 +93,75 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        await prisma.savedSearch.update({
-          where: { id: savedSearch.id },
-          data: { lastRunAt: now },
-        });
+        const now = new Date();
+        const shouldAttemptEmail =
+          !isFirstRun &&
+          newJobIds.length > 0 &&
+          (!savedSearch.lastNotifiedAt || savedSearch.lastNotifiedAt < now);
 
-        // Send email if there are new jobs and we haven't already notified for this run.
-        // `now` is the run's effective lastRunAt (set above); comparing against it
-        // means a missed/failed digest in a previous tick will be retried.
-        if (newJobIds.length > 0 && (!savedSearch.lastNotifiedAt || savedSearch.lastNotifiedAt < now)) {
-          const emailTarget = savedSearch.notifyEmail || savedSearch.user?.email;
-          const targetEmail = process.env.EMAIL_TEST_MODE === "true" ? process.env.ADMIN_EMAIL : emailTarget;
+        const emailTarget = savedSearch.notifyEmail || savedSearch.user?.email;
+        const targetEmail = process.env.EMAIL_TEST_MODE === "true" ? process.env.ADMIN_EMAIL : emailTarget;
 
-          if (targetEmail && resend) {
-            const newJobsDetails = exaResults
-              .filter((j) => newJobIds.includes(j.id))
-              .slice(0, 5)
-              .map((j) => ({
-                title: j.title,
-                company: j.author || "Unknown Company",
-                url: j.url,
-              }));
+        if (shouldAttemptEmail && targetEmail && resend && process.env.RESEND_FROM) {
+          // ... (email sending logic with retry — keep as-is for now)
+          let sendSuccess = false;
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              const newJobsDetails = exaResults
+                .filter((j) => newJobIds.includes(j.id))
+                .slice(0, 5)
+                .map((j) => ({
+                  title: j.title,
+                  company: j.author || "Unknown Company",
+                  url: j.url,
+                }));
 
-            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://openrolekb.example.com";
-            const searchUrl = `${siteUrl}/search?q=${encodeURIComponent(savedSearch.rawQuery)}`;
+              const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://openrolekb.example.com";
+              const searchUrl = `${siteUrl}/search?q=${encodeURIComponent(savedSearch.rawQuery)}`;
 
-            await resend.emails.send({
-              from: "OpenRoleKB <digest@openrolekb.example.com>",
-              to: targetEmail,
-              subject: `New jobs matching "${savedSearch.rawQuery}"`,
-              html: generateDigestEmailHtml(savedSearch.rawQuery, newJobIds.length, newJobsDetails, searchUrl),
-            });
+              await resend.emails.send({
+                from: process.env.RESEND_FROM,
+                to: targetEmail,
+                subject: `New jobs matching "${savedSearch.rawQuery}"`,
+                html: generateDigestEmailHtml(savedSearch.rawQuery, newJobIds.length, newJobsDetails, searchUrl),
+              });
 
-            await prisma.savedSearch.update({
-              where: { id: savedSearch.id },
-              data: { lastNotifiedAt: now },
-            });
-
-            await prisma.eventLog.create({
-              data: {
-                evt: "digest_email_sent",
-                ownerKey: savedSearch.anonId || savedSearch.userId,
-                resultCount: newJobIds.length,
-                parseMs: 0,
-                exaMs: 0,
-                rerankMs: 0,
-                totalMs: 0,
-                rerankFailed: false,
-              },
-            });
-
-            log.info({
-              evt: "digest_email_sent",
-              savedSearchId: savedSearch.id,
-              targetEmail,
-            });
+              sendSuccess = true;
+              break;
+            } catch (sendErr) {
+              if (attempt === 0) {
+                log.warn({ evt: "digest_email_retry", savedSearchId: savedSearch.id, attempt });
+                await new Promise((r) => setTimeout(r, 800));
+              } else {
+                captureRouteError(sendErr, { route: "/api/cron/saved-search-run", savedSearchId: savedSearch.id, phase: "email" });
+              }
+            }
           }
+          if (sendSuccess) {
+            await prisma.savedSearch.update({ where: { id: savedSearch.id }, data: { lastNotifiedAt: now } });
+            await prisma.eventLog.create({ data: { evt: "digest_email_sent", ownerKey: savedSearch.anonId || savedSearch.userId, resultCount: newJobIds.length, parseMs: 0, exaMs: 0, rerankMs: 0, totalMs: 0, rerankFailed: false } });
+            log.info({ evt: "digest_email_sent", savedSearchId: savedSearch.id, targetEmail });
+          }
+          await prisma.savedSearch.update({ where: { id: savedSearch.id }, data: { lastRunAt: now } });
+        } else {
+          await prisma.savedSearch.update({ where: { id: savedSearch.id }, data: { lastRunAt: now } });
         }
 
         await prisma.eventLog.create({
-          data: {
-            evt: "saved_search_run_completed",
-            ownerKey: savedSearch.anonId || savedSearch.userId,
-            resultCount: newJobIds.length,
-            parseMs: 0,
-            exaMs: 0,
-            rerankMs: 0,
-            totalMs: 0,
-            rerankFailed: false,
-          },
+          data: { evt: "saved_search_run_completed", ownerKey: savedSearch.anonId || savedSearch.userId, resultCount: newJobIds.length, parseMs: 0, exaMs: 0, rerankMs: 0, totalMs: 0, rerankFailed: false },
         });
-
-        log.info({
-          evt: "saved_search_run_completed",
-          savedSearchId: savedSearch.id,
-          newJobCount: newJobIds.length,
-        });
+        log.info({ evt: "saved_search_run_completed", savedSearchId: savedSearch.id, newJobCount: newJobIds.length, isFirstRun });
       } catch (err) {
         captureRouteError(err, { route: "/api/cron/saved-search-run", savedSearchId: savedSearch.id, phase: "run" });
       }
+    };
+
+    // Concurrency control for cron (p-limit style without extra dep).
+    // Full AbortSignal threading: pass request.signal down to search/rerank (they support it).
+    const CONCURRENCY = 5;
+    for (let i = 0; i < savedSearches.length; i += CONCURRENCY) {
+      const batch = savedSearches.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map((s) => processOne(s, request.signal)));
     }
 
     return new NextResponse("OK", { status: 200 });

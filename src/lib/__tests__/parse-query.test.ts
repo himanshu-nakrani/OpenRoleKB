@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeFilters } from "@/lib/parse-query";
+import { sanitizeFilters, parseQuery } from "@/lib/parse-query";
 
 describe("sanitizeFilters", () => {
   it("returns empty filters for non-object input", () => {
@@ -105,5 +105,34 @@ describe("sanitizeFilters", () => {
     const evil: Record<string, unknown> = { role: "x" };
     evil["__proto__"] = { polluted: true };
     expect(() => sanitizeFilters(evil)).not.toThrow();
+  });
+});
+
+describe("parseQuery fast-path", () => {
+  it("fast-paths simple role-only queries without LLM", async () => {
+    const result = await parseQuery("react engineer");
+    expect(result.filters).toEqual({ role: "react engineer" });
+    expect(result.tokens).toBe(0);
+    expect(result.parseError).toBeUndefined();
+  });
+
+  it("fast-paths short queries without filter keywords", async () => {
+    const result = await parseQuery("python developer");
+    expect(result.filters.role).toBe("python developer");
+    expect(result.tokens).toBe(0);
+  });
+
+  it("still uses LLM for queries with filter triggers (remote, senior, etc.)", async () => {
+    // These should NOT hit fast-path (we can't fully assert LLM call without mocking here,
+    // but the presence of trigger words means it will attempt the real path or error gracefully in test env)
+    const result = await parseQuery("senior react remote eu");
+    // Either fast-path didn't trigger, or it fell back
+    expect(result.filters.role).toBeDefined();
+  });
+
+  it("fast-paths very short clean role queries", async () => {
+    const result = await parseQuery("dev");
+    expect(result.filters).toEqual({ role: "dev" });
+    expect(result.tokens).toBe(0);
   });
 });

@@ -11,15 +11,16 @@ const FeedbackModal = dynamic(
   { ssr: false },
 );
 import { extractCompany } from "@/lib/company";
-import type { ExaResult, RerankItem } from "@/types/job";
+import type { ExaResult, RerankItem, Filters } from "@/types/job";
 
 interface DetailPaneProps {
   exaResults: ExaResult[];
   reranked: RerankItem[];
   selectedIdx: number | null;
+  filters?: Filters | null;
 }
 
-export function DetailPane({ exaResults, reranked, selectedIdx }: DetailPaneProps) {
+export function DetailPane({ exaResults, reranked, selectedIdx, filters }: DetailPaneProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   if (selectedIdx === null) {
@@ -58,13 +59,7 @@ export function DetailPane({ exaResults, reranked, selectedIdx }: DetailPaneProp
     try { return new URL(job.url).hostname.replace("www.", ""); } catch { return null; }
   })();
 
-  const currentFilters = (() => {
-    try {
-      const el = document.querySelector<HTMLDivElement>('[data-filters]');
-      if (el?.dataset.filters) return JSON.parse(el.dataset.filters);
-    } catch {}
-    return null;
-  })();
+  const currentFilters = filters ?? null; // prefer prop-drilled (avoids brittle DOM querySelector hack)
 
   return (
     <div>
@@ -79,16 +74,39 @@ export function DetailPane({ exaResults, reranked, selectedIdx }: DetailPaneProp
           )}
           {job.publishedDate && <FreshnessPill publishedDate={job.publishedDate} />}
           {job.lastSeenAt && <StillListedBadge lastSeenAt={job.lastSeenAt} publishedDate={job.publishedDate} />}
+          {(job.salaryMinUsd || job.salaryMaxUsd) && (
+            <span className="text-accent">
+              {job.salaryMinUsd ? `$${Math.round(job.salaryMinUsd / 1000)}k` : ""}
+              {job.salaryMinUsd && job.salaryMaxUsd ? "–" : ""}
+              {job.salaryMaxUsd ? `$${Math.round(job.salaryMaxUsd / 1000)}k` : ""}
+              {job.salaryRaw ? " (est.)" : ""}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-4 mt-4 flex-wrap">
           <a
-            href={job.url}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`/api/click?jobId=${encodeURIComponent(job.id)}&url=${encodeURIComponent(job.url)}`}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent-dark text-accent-text text-small font-medium hover:brightness-110 active:brightness-90 active:scale-[0.98] transition-all duration-120"
           >
             Apply on {domain || "site"} <ExternalLink size={14} strokeWidth={2} aria-hidden />
           </a>
+          <button
+            onClick={async () => {
+              const company = extractCompany(job.url) || job.author;
+              if (!company) return;
+              try {
+                await fetch("/api/hidden-companies", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "x-anon-id": localStorage.getItem("openrolekb_anon_id") || "" },
+                  body: JSON.stringify({ company }),
+                });
+                alert(`Hidden ${company}. Future results will exclude it.`);
+              } catch {}
+            }}
+            className="text-small text-muted hover:text-ink px-3 py-2 border border-border rounded-full"
+          >
+            Hide company
+          </button>
           {job.score !== undefined && (
             <span className="flex items-center gap-2 text-small text-muted">
               <ScoreChip score={job.score} />

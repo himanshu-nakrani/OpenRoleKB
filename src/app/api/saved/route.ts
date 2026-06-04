@@ -4,6 +4,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getOwnerIdentity, type OwnerIdentity } from "@/lib/owner";
 import { hashQuery } from "@/lib/hash";
 import { sanitizeFilters } from "@/lib/parse-query";
+import { MAX_QUERY_LENGTH } from "@/lib/config";
 import type { Prisma } from "../../../../generated/prisma/client";
 
 function identityFilter(identity: OwnerIdentity) {
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "rawQuery required" }, { status: 400 });
   }
 
-  if (rawQuery.length > 1000) {
+  if (rawQuery.length > MAX_QUERY_LENGTH) {
     return NextResponse.json({ error: "query too long" }, { status: 400 });
   }
 

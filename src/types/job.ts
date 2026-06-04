@@ -23,6 +23,10 @@ export interface ExaResult {
    * we haven't written/refreshed the Job row yet. Used by StillListedBadge.
    */
   lastSeenAt?: string;
+  // P2 salary extraction
+  salaryMinUsd?: number;
+  salaryMaxUsd?: number;
+  salaryRaw?: string;
 }
 
 export interface RerankItem {

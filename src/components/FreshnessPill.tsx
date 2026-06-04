@@ -1,5 +1,7 @@
 "use client";
 
+import { FRESHNESS_WEEK_DAYS } from "@/lib/config";
+
 interface FreshnessPillProps {
   publishedDate?: string | null;
   /** Compact: shows just the label. Otherwise prepends a dot indicator. */
@@ -22,7 +24,7 @@ function classify(publishedDate: string): { tier: Tier; days: number } | null {
   const ageMs = Date.now() - parsed.getTime();
   if (ageMs < 0) return { tier: "fresh", days: 0 };
   const days = Math.floor(ageMs / (1000 * 60 * 60 * 24));
-  if (days < 7) return { tier: "fresh", days };
+  if (days < FRESHNESS_WEEK_DAYS) return { tier: "fresh", days };
   if (days < 21) return { tier: "recent", days };
   if (days < 60) return { tier: "aging", days };
   if (days < 120) return { tier: "stale", days };
@@ -33,7 +35,7 @@ function styleFor(tier: Tier, days: number): TierStyle {
   // Label rules
   let label: string;
   if (days === 0) label = "today";
-  else if (days < 7) label = `${days}d ago`;
+  else if (days < FRESHNESS_WEEK_DAYS) label = `${days}d ago`;
   else if (days < 30) label = `${Math.floor(days / 7)}w ago`;
   else if (days < 365) label = `${Math.floor(days / 30)}mo ago`;
   else label = `${Math.floor(days / 365)}y ago`;
@@ -105,7 +107,7 @@ export function FreshnessPill({ publishedDate, compact, className = "" }: Freshn
   );
 }
 
-// Exported for tests + the "Posted this week" filter chip.
+// Exported for tests + the "Posted this week" filter chip (see ResultsList).
 export function isWithinDays(publishedDate: string | null | undefined, days: number): boolean {
   if (!publishedDate) return false;
   const parsed = new Date(publishedDate);

@@ -89,12 +89,17 @@ export const JobScalarFieldEnum = {
   title: 'title',
   company: 'company',
   location: 'location',
+  locationRaw: 'locationRaw',
   isRemote: 'isRemote',
   description: 'description',
   publishedAt: 'publishedAt',
   source: 'source',
   firstSeenAt: 'firstSeenAt',
-  lastSeenAt: 'lastSeenAt'
+  lastSeenAt: 'lastSeenAt',
+  salaryMinUsd: 'salaryMinUsd',
+  salaryMaxUsd: 'salaryMaxUsd',
+  salaryRaw: 'salaryRaw',
+  dedupKey: 'dedupKey'
 } as const
 
 export type JobScalarFieldEnum = (typeof JobScalarFieldEnum)[keyof typeof JobScalarFieldEnum]

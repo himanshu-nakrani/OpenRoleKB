@@ -3,16 +3,17 @@
 import { useEffect, useRef } from "react";
 import { ChevronLeft } from "lucide-react";
 import { DetailPane } from "@/components/DetailPane";
-import type { ExaResult, RerankItem } from "@/types/job";
+import type { ExaResult, RerankItem, Filters } from "@/types/job";
 
 interface DetailSheetProps {
   exaResults: ExaResult[];
   reranked: RerankItem[];
   selectedIdx: number | null;
   onClose: () => void;
+  filters?: Filters | null;
 }
 
-export function DetailSheet({ exaResults, reranked, selectedIdx, onClose }: DetailSheetProps) {
+export function DetailSheet({ exaResults, reranked, selectedIdx, onClose, filters }: DetailSheetProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export function DetailSheet({ exaResults, reranked, selectedIdx, onClose }: Deta
         >
           <ChevronLeft size={14} strokeWidth={2} aria-hidden /> Back to results
         </button>
-        <DetailPane exaResults={exaResults} reranked={reranked} selectedIdx={selectedIdx} />
+        <DetailPane exaResults={exaResults} reranked={reranked} selectedIdx={selectedIdx} filters={filters} />
       </div>
     </dialog>
   );

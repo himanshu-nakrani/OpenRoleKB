@@ -211,4 +211,43 @@ describe("POST /api/search", () => {
     expect(events[1].event).toBe("error");
     expect(events[1].data).toEqual({ message: "Exa API error" });
   });
+
+  it("accepts filters override (skips LLM parse, parseMs=0 path, uses provided filters via sanitize mock)", async () => {
+    mockRateLimit.mockResolvedValue({ ok: true });
+    mockGetCachedSearch.mockResolvedValue(null);
+    mockSearchJobs.mockResolvedValue(fixtures.slice(0, 2));
+    mockRerankWithMetrics.mockResolvedValue({ items: [{ idx: 0, score: 0.9, fit: "good" }], tokens: 10 });
+
+    // Note: the route.test mocks sanitizeFilters as identity passthrough (see top of file).
+    // Real sanitize trims/floors/caps; here we just prove the override branch was taken
+    // (no parseQuery LLM call) and the filters we sent reached the "parsed" SSE event.
+    const overrideFilters = { role: "  senior engineer  ", remote: true, salaryMin: 123456.7, exclude: ["crypto", "blockchain"] };
+    const req = new NextRequest("http://localhost/api/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: "ignored when filters provided", filters: overrideFilters }),
+    });
+
+    const res = await POST(req);
+    const events = await readSSEStream(res);
+
+    const parsedEvent = events.find((e) => e.event === "parsed");
+    expect(parsedEvent).toBeTruthy();
+    // Under test mock, we get back (essentially) what we sent in the override.
+    expect(parsedEvent!.data).toMatchObject({
+      role: "  senior engineer  ",
+      remote: true,
+      salaryMin: 123456.7,
+      exclude: ["crypto", "blockchain"],
+    });
+
+    // Crucially, the LLM parse path was not exercised for this request.
+    // (parseQuery mock is cleared per test via beforeEach + we didn't hit the else branch.)
+    expect(mockParseQuery).not.toHaveBeenCalled();
+
+    // downstream still works (results + rerank + done)
+    expect(events.some((e) => e.event === "results")).toBe(true);
+    expect(events.some((e) => e.event === "rerank")).toBe(true);
+    expect(events.some((e) => e.event === "done")).toBe(true);
+  });
 });

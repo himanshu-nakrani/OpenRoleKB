@@ -2,6 +2,8 @@
 
 This document outlines the marginal cost per active user per month based on real telemetry from `EventLog.exaCostUsd` and `EventLog.llmCostUsd`.
 
+**Source of truth for the numbers used in code / dashboards**: `src/lib/config.ts` (EXA_USD_PER_REQUEST, DEEPSEEK_USD_PER_1K_TOKENS, etc.). Update this doc when they change.
+
 ## Current Pricing Assumptions (as of 2026-06)
 - **Exa Search**: $0.005 per request (1 request = 50 results)
 - **DeepSeek Chat (v3)**: $0.00027 per 1K tokens (blended input + output)

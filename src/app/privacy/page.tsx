@@ -20,7 +20,7 @@ export default function PrivacyPage() {
         </ul>
         <h2 className="text-xl font-semibold text-ink mt-6 mb-3">Data Retention</h2>
         <p className="mb-4">
-          Saved searches are retained until you explicitly delete them. Anonymous session data is periodically purged after 90 days of inactivity.
+          Saved searches are retained until you explicitly delete them. Anonymous session data (including saved searches, interactions, and hidden companies for unauthenticated users) is periodically purged after 30 days of inactivity. See the cache-purge cron for exact windows (configurable in src/lib/config.ts).
         </p>
         <h2 className="text-xl font-semibold text-ink mt-6 mb-3">Contact</h2>
         <p>

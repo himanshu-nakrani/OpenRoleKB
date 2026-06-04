@@ -6,3 +6,30 @@ export function extractLocation(text: string): { location: string | null; isRemo
   const isRemote = REMOTE_RX.test(text);
   return { location: loc, isRemote };
 }
+
+// Small lookup for common variants -> canonical form (P2 location norm, no NLP)
+const LOCATION_NORM: Record<string, string> = {
+  sf: "San Francisco, CA",
+  "san francisco": "San Francisco, CA",
+  "bay area": "San Francisco Bay Area, CA",
+  nyc: "New York, NY",
+  "new york": "New York, NY",
+  "new york city": "New York, NY",
+  "ny": "New York, NY",
+  la: "Los Angeles, CA",
+  "los angeles": "Los Angeles, CA",
+  seattle: "Seattle, WA",
+  austin: "Austin, TX",
+  boston: "Boston, MA",
+  chicago: "Chicago, IL",
+  london: "London, UK",
+  berlin: "Berlin, Germany",
+  "remote us": "Remote (US)",
+  "remote eu": "Remote (EU)",
+};
+
+export function normalizeLocation(loc: string | null): string | null {
+  if (!loc) return null;
+  const key = loc.toLowerCase().trim().replace(/\s+/g, " ");
+  return LOCATION_NORM[key] || loc;
+}

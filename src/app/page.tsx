@@ -82,6 +82,7 @@ export default function Home() {
               exaResults={searchState.exaResults}
               reranked={searchState.reranked}
               selectedIdx={selectedIdx}
+              filters={searchState.filters}
             />
           </div>
         </div>
@@ -93,6 +94,7 @@ export default function Home() {
           reranked={searchState.reranked}
           selectedIdx={selectedIdx}
           onClose={() => setSelectedIdx(null)}
+          filters={searchState.filters}
         />
       ) : null}
     </div>

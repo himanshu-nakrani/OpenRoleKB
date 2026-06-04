@@ -5,6 +5,7 @@ import { ResultRow } from "@/components/ResultRow";
 import { LoadingNarrative } from "@/components/LoadingNarrative";
 import { isWithinDays } from "@/components/FreshnessPill";
 import { extractCompany } from "@/lib/company";
+import { FRESHNESS_WEEK_DAYS } from "@/lib/config";
 import type { ExaResult, RerankItem } from "@/types/job";
 
 interface MergedResult extends ExaResult {
@@ -54,10 +55,21 @@ export function ResultsList({
       merged = exaResults.map((r, i) => ({ ...r, score: undefined, fit: undefined, originalIdx: i }));
     }
 
+    // Dedup by dedupKey (P2.3): keep the highest-scoring representative per key
+    const byDedup = new Map<string, MergedResult>();
+    for (const m of merged) {
+      const key = (m as { dedupKey?: string }).dedupKey || m.url;
+      const existing = byDedup.get(key);
+      if (!existing || (m.score || 0) > (existing.score || 0)) {
+        byDedup.set(key, m);
+      }
+    }
+    merged = Array.from(byDedup.values());
+
     if (freshOnly) {
-      // "This week" means < 7 days old AND has a publishedDate. Rows with
+      // "This week" means < FRESHNESS_WEEK_DAYS old AND has a publishedDate. Rows with
       // no date are excluded — we can't prove freshness so we don't claim it.
-      merged = merged.filter((r) => isWithinDays(r.publishedDate, 7));
+      merged = merged.filter((r) => isWithinDays(r.publishedDate, FRESHNESS_WEEK_DAYS));
     }
 
     if (sortMode === "newest") {
@@ -193,6 +205,9 @@ export function ResultsList({
               pulse={showPulse && r.score === undefined}
               isSelected={selectedIdx === i}
               onClick={() => onSelect(i)}
+              salaryMinUsd={r.salaryMinUsd}
+              salaryMaxUsd={r.salaryMaxUsd}
+              salaryRaw={r.salaryRaw}
             />
           </span>
         ))}

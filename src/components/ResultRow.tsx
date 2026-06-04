@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { ScoreChip } from "@/components/ScoreChip";
 import { FreshnessPill } from "@/components/FreshnessPill";
+import { MIN_RERANK_SCORE } from "@/lib/config";
 
 interface ResultRowProps {
   title: string;
@@ -14,6 +15,10 @@ interface ResultRowProps {
   pulse?: boolean;
   isSelected?: boolean;
   onClick: () => void;
+  // P2 salary
+  salaryMinUsd?: number;
+  salaryMaxUsd?: number;
+  salaryRaw?: string;
 }
 
 export function ResultRow({
@@ -25,6 +30,8 @@ export function ResultRow({
   publishedDate,
   isSelected,
   onClick,
+  salaryMinUsd,
+  salaryMaxUsd,
 }: ResultRowProps) {
   const ref = useRef<HTMLButtonElement>(null);
 
@@ -42,7 +49,7 @@ export function ResultRow({
   // Meta line now carries only the always-truthy company + domain bits.
   const meta = [company, domain].filter(Boolean).join(" · ");
 
-  const showScore = score !== undefined && score >= 0.4;
+  const showScore = score !== undefined && score >= MIN_RERANK_SCORE;
 
   return (
     <button
@@ -60,6 +67,13 @@ export function ResultRow({
         <div className="flex-1 min-w-0">
           <p className="text-body font-medium text-ink truncate">{title}</p>
           <p className="text-small text-ink-soft truncate mt-1">{meta}</p>
+          {(salaryMinUsd || salaryMaxUsd) && (
+            <p className="text-small text-accent mt-0.5">
+              {salaryMinUsd ? `$${Math.round(salaryMinUsd / 1000)}k` : ""}
+              {salaryMinUsd && salaryMaxUsd ? "–" : ""}
+              {salaryMaxUsd ? `$${Math.round(salaryMaxUsd / 1000)}k` : ""}
+            </p>
+          )}
           {publishedDate && (
             <div className="mt-1.5">
               <FreshnessPill publishedDate={publishedDate} compact />

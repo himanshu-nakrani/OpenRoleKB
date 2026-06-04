@@ -1,6 +1,13 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
+import { log } from "@/lib/logger";
+import {
+  RATE_LIMIT_IP_WINDOW_MS,
+  RATE_LIMIT_IP_MAX,
+  RATE_LIMIT_OWNER_WINDOW_MS,
+  RATE_LIMIT_OWNER_MAX,
+} from "@/lib/config";
 
 // ── Upstash (production) ──────────────────────────────────────────────
 let redis: Redis | null = null;
@@ -15,12 +22,12 @@ function initUpstash() {
   redis = new Redis({ url, token });
   ipLimiter = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(10, "60 s"),
+    limiter: Ratelimit.slidingWindow(RATE_LIMIT_IP_MAX, `${RATE_LIMIT_IP_WINDOW_MS / 1000} s`),
     prefix: "rl:ip",
   });
   ownerLimiter = new Ratelimit({
     redis,
-    limiter: Ratelimit.fixedWindow(100, "24 h"),
+    limiter: Ratelimit.fixedWindow(RATE_LIMIT_OWNER_MAX, `${RATE_LIMIT_OWNER_WINDOW_MS / (1000 * 60 * 60)} h`),
     prefix: "rl:owner",
   });
   return true;
@@ -28,8 +35,8 @@ function initUpstash() {
 
 // ── In-memory fallback (local dev without Redis) ──────────────────────
 const buckets = new Map<string, { tokens: number; lastRefill: number }>();
-const MAX_REQUESTS = 10;
-const WINDOW_MS = 60_000;
+const MAX_REQUESTS = RATE_LIMIT_IP_MAX;
+const WINDOW_MS = RATE_LIMIT_IP_WINDOW_MS;
 
 function inMemoryLimit(ip: string): boolean {
   const now = Date.now();
@@ -64,17 +71,26 @@ export async function rateLimit(
 
   if (initUpstash() && ipLimiter) {
     const ipResult = await ipLimiter.limit(ip);
-    if (!ipResult.success) return { ok: false, reason: "ip" };
+    if (!ipResult.success) {
+      log.warn({ evt: "rate_limited", reason: "ip", ip });
+      return { ok: false, reason: "ip" };
+    }
 
     if (ownerKey && ownerLimiter) {
       const ownerResult = await ownerLimiter.limit(ownerKey);
-      if (!ownerResult.success) return { ok: false, reason: "owner" };
+      if (!ownerResult.success) {
+        log.warn({ evt: "rate_limited", reason: "owner", ownerKey });
+        return { ok: false, reason: "owner" };
+      }
     }
     return { ok: true };
   }
 
   // In-memory fallback
   const allowed = inMemoryLimit(ip);
+  if (!allowed) {
+    log.warn({ evt: "rate_limited", reason: "ip", ip: "in-mem" });
+  }
   return { ok: allowed, reason: allowed ? undefined : "ip" };
 }
 

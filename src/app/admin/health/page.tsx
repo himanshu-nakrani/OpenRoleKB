@@ -11,44 +11,125 @@ export default async function AdminHealth() {
     redirect("/");
   }
 
-  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const HOUR = 60 * 60 * 1000;
   const DAY = 24 * HOUR;
 
+  // For recent list we still load a capped set (good for the table).
+  // For stats we use targeted aggregates / raw SQL to avoid loading everything in JS.
   const events = await prisma.eventLog.findMany({
     where: { createdAt: { gt: new Date(now - DAY) } },
     orderBy: { createdAt: "desc" },
     take: 500,
   });
-  const lastHour = events.filter((e) => e.createdAt.getTime() > now - HOUR);
 
-  const cacheHitRate = lastHour.length
-    ? Math.round((lastHour.filter((e) => e.cacheHit).length / lastHour.length) * 100)
+  // Stats via more efficient queries (less JS heavy lifting)
+  const searchCount1h = await prisma.eventLog.count({
+    where: { evt: "search", createdAt: { gt: new Date(now - HOUR) } },
+  });
+  const searchCount24h = await prisma.eventLog.count({
+    where: { evt: "search", createdAt: { gt: new Date(now - DAY) } },
+  });
+
+  const cacheHitCount1h = await prisma.eventLog.count({
+    where: { evt: "search", cacheHit: true, createdAt: { gt: new Date(now - HOUR) } },
+  });
+  const cacheHitRate = searchCount1h ? Math.round((cacheHitCount1h / searchCount1h) * 100) : 0;
+
+  const rerankFailCount24 = await prisma.eventLog.count({
+    where: { evt: "search", rerankFailed: true, createdAt: { gt: new Date(now - DAY) } },
+  });
+  const rerankFailureRate = searchCount24h ? Math.round((rerankFailCount24 / searchCount24h) * 10000) / 100 : 0;
+
+  // Percentiles via SQL (accurate, no full sort in Node)
+  let p50 = 0, p95 = 0, p99 = 0, p95Day = 0;
+  try {
+    const [p50r] = await prisma.$queryRaw<{ p: number }[]>`
+      SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY "totalMs") as p FROM "EventLog"
+      WHERE "evt"='search' AND "createdAt" > ${new Date(now - HOUR)}
+    `;
+    p50 = Math.round(p50r?.p ?? 0);
+
+    const [p95r] = await prisma.$queryRaw<{ p: number }[]>`
+      SELECT percentile_cont(0.95) WITHIN GROUP (ORDER BY "totalMs") as p FROM "EventLog"
+      WHERE "evt"='search' AND "createdAt" > ${new Date(now - HOUR)}
+    `;
+    p95 = Math.round(p95r?.p ?? 0);
+
+    const [p99r] = await prisma.$queryRaw<{ p: number }[]>`
+      SELECT percentile_cont(0.99) WITHIN GROUP (ORDER BY "totalMs") as p FROM "EventLog"
+      WHERE "evt"='search' AND "createdAt" > ${new Date(now - HOUR)}
+    `;
+    p99 = Math.round(p99r?.p ?? 0);
+
+    const [p95dr] = await prisma.$queryRaw<{ p: number }[]>`
+      SELECT percentile_cont(0.95) WITHIN GROUP (ORDER BY "totalMs") as p FROM "EventLog"
+      WHERE "evt"='search' AND "createdAt" > ${new Date(now - DAY)}
+    `;
+    p95Day = Math.round(p95dr?.p ?? 0);
+  } catch {
+    // fallback to JS on the loaded set if raw fails (e.g. in some test DBs)
+  }
+
+  const lastHourEventsForFallback = events.filter((e) => e.createdAt.getTime() > now - HOUR && e.evt === "search");
+  if (p95 === 0 && lastHourEventsForFallback.length > 0) {
+    const sorted = lastHourEventsForFallback.map((e) => e.totalMs).sort((a, b) => a - b);
+    p95 = Math.round(sorted[Math.floor(sorted.length * 0.95)] || 0);
+  }
+
+  // Cost aggregates (can be raw too but reduce on small set is fine)
+  const searchEventsForCost = events.filter((e) => e.evt === "search");
+  const sumExaCost = searchEventsForCost.reduce((s, e) => s + (e.exaCostUsd ?? 0), 0);
+  const sumLlmCost = searchEventsForCost.reduce((s, e) => s + (e.llmCostUsd ?? 0), 0);
+  const totalCost24 = sumExaCost + sumLlmCost;
+  const costPerSearch = searchCount24h ? totalCost24 / searchCount24h : 0;
+
+  // Volume sparkline still uses the capped events (acceptable for dashboard)
+  const searchEvents = events.filter((e) => e.evt === "search");
+  const buckets = Array.from({ length: 24 }, (_, i) => {
+    const start = now - (24 - i) * HOUR;
+    const end = start + HOUR;
+    return searchEvents.filter((e) => {
+      const t = e.createdAt.getTime();
+      return t >= start && t < end;
+    }).length;
+  });
+  const maxBucket = Math.max(1, ...buckets);
+
+  // Efficiency / measurement indicators (visible impact of P1 changes: fast-path parse, L1 cache, parallel hidden, etc.)
+  const avgParseMs = searchEvents.length
+    ? Math.round(searchEvents.reduce((s, e) => s + (e.parseMs || 0), 0) / searchEvents.length)
+    : 0;
+  const avgTotalMs = searchEvents.length
+    ? Math.round(searchEvents.reduce((s, e) => s + (e.totalMs || 0), 0) / searchEvents.length)
     : 0;
 
-  const totalMsSortedHour = lastHour.map((e) => e.totalMs).sort((a, b) => a - b);
-  const totalMsSortedDay = events.map((e) => e.totalMs).sort((a, b) => a - b);
+  const cacheHitRate = searchLastHour.length
+    ? Math.round((searchLastHour.filter((e) => e.cacheHit).length / searchLastHour.length) * 100)
+    : 0;
+
+  const totalMsSortedHour = searchLastHour.map((e) => e.totalMs).sort((a, b) => a - b);
+  const totalMsSortedDay = searchEvents.map((e) => e.totalMs).sort((a, b) => a - b);
   const p50 = percentile(totalMsSortedHour, 0.5);
   const p95 = percentile(totalMsSortedHour, 0.95);
   const p99 = percentile(totalMsSortedHour, 0.99);
   const p95Day = percentile(totalMsSortedDay, 0.95);
 
-  const rerankFailures24 = events.filter((e) => e.rerankFailed).length;
-  const rerankFailureRate = events.length
-    ? Math.round((rerankFailures24 / events.length) * 10000) / 100
+  const rerankFailures24 = searchEvents.filter((e) => e.rerankFailed).length;
+  const rerankFailureRate = searchEvents.length
+    ? Math.round((rerankFailures24 / searchEvents.length) * 10000) / 100
     : 0;
 
-  const sumExaCost = events.reduce((s, e) => s + (e.exaCostUsd ?? 0), 0);
-  const sumLlmCost = events.reduce((s, e) => s + (e.llmCostUsd ?? 0), 0);
+  const sumExaCost = searchEvents.reduce((s, e) => s + (e.exaCostUsd ?? 0), 0);
+  const sumLlmCost = searchEvents.reduce((s, e) => s + (e.llmCostUsd ?? 0), 0);
   const totalCost24 = sumExaCost + sumLlmCost;
-  const costPerSearch = events.length ? totalCost24 / events.length : 0;
+  const costPerSearch = searchEvents.length ? totalCost24 / searchEvents.length : 0;
 
-  // Volume sparkline buckets (24 × 1-hour buckets)
+  // Volume sparkline buckets (24 × 1-hour buckets) — searches only for clarity
   const buckets = Array.from({ length: 24 }, (_, i) => {
     const start = now - (24 - i) * HOUR;
     const end = start + HOUR;
-    return events.filter((e) => {
+    return searchEvents.filter((e) => {
       const t = e.createdAt.getTime();
       return t >= start && t < end;
     }).length;
@@ -81,8 +162,8 @@ export default async function AdminHealth() {
 
       <Section title="Traffic">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard label="Searches (1h)" value={String(lastHour.length)} />
-          <StatCard label="Searches (24h)" value={String(events.length)} />
+          <StatCard label="Searches (1h)" value={String(searchCount1h)} />
+          <StatCard label="Searches (24h)" value={String(searchCount24h)} />
           <StatCard label="Cache hit (1h)" value={cacheHitRate + "%"} />
           <StatCard label="Rerank fail (24h)" value={rerankFailureRate + "%"} />
         </div>
@@ -127,7 +208,30 @@ export default async function AdminHealth() {
         </div>
       </Section>
 
-      <h2 className="text-h2 font-medium mt-8 mb-3">Recent searches</h2>
+      <Section title="Cron / Retention">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard
+            label="Digest emails sent (24h)"
+            value={String(events.filter((e) => e.evt === "digest_email_sent").length)}
+          />
+          <StatCard
+            label="Saved search runs (24h)"
+            value={String(events.filter((e) => e.evt === "saved_search_run_completed").length)}
+          />
+        </div>
+      </Section>
+
+      <Section title="Efficiency (P1 impact)">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard label="Avg parseMs (24h, searches)" value={avgParseMs + "ms"} />
+          <StatCard label="Avg totalMs (24h, searches)" value={avgTotalMs + "ms"} />
+          <StatCard label="Cache hit (1h)" value={cacheHitRate + "%"} />
+          <StatCard label="Rerank fail (24h)" value={rerankFailureRate + "%"} />
+        </div>
+        <p className="text-micro text-ink-soft mt-2">Lower parseMs indicates fast-path and override wins. Watch after config / LLM changes.</p>
+      </Section>
+
+      <h2 className="text-h2 font-medium mt-8 mb-3">Recent events (last 50)</h2>
       {events.length === 0 ? (
         <p className="text-ink-soft">No search events logged yet.</p>
       ) : (

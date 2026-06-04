@@ -13,12 +13,17 @@ model Job {
   title        String
   company      String?
   location     String?
+  locationRaw  String?          // original before normalization
   isRemote     Boolean?
   description  String?
   publishedAt  DateTime?
   source       String
   firstSeenAt  DateTime         @default(now())
   lastSeenAt   DateTime         @updatedAt
+  salaryMinUsd Int?
+  salaryMaxUsd Int?
+  salaryRaw    String?
+  dedupKey     String?          // sha256(normalized title + company + location) for dedup
   interactions JobInteraction[]
 }
 

@@ -47,6 +47,20 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
     return () => clearInterval(timer);
   }, [focused]);
 
+  // P2.7 load initial query from URL (e.g. shared links)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("q");
+      if (q && !query) {
+        setQuery(q);
+        // auto-run after mount
+        setTimeout(() => runSearch(), 50);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     function handleGlobalKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -75,6 +89,13 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
   async function runSearch(filters?: Filters) {
     const q = query.trim();
     if (!q) return;
+
+    // P2.7 basic URL persistence for query
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("q", q);
+      window.history.replaceState({}, "", url.toString());
+    } catch {}
 
     abortRef.current?.abort();
     abortRef.current = new AbortController();
@@ -265,6 +286,29 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
         </div>
       )}
 
+      {/* P2.6 basic multi-turn refinement (append to query for now; full LLM refine later) */}
+      {state.phase === "idle" && state.exaResults.length > 0 && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const refine = (e.currentTarget.elements.namedItem("refine") as HTMLInputElement)?.value.trim();
+            if (refine) {
+              setQuery((prev) => (prev ? prev + ", " + refine : refine));
+              // re-run with appended
+              setTimeout(() => runSearch(), 0);
+            }
+          }}
+          className="mt-2 flex gap-2"
+        >
+          <input
+            name="refine"
+            placeholder="Refine: too senior, only fintech, exclude crypto..."
+            className="flex-1 text-small px-3 py-1.5 rounded-full border border-border bg-surface text-ink placeholder:text-muted focus:outline-none focus:border-border-strong"
+          />
+          <button type="submit" className="text-small px-3 py-1 rounded-full border border-border hover:bg-surface-2">Refine</button>
+        </form>
+      )}
+
       {state.error && (
         <div role="alert" className="mt-4 p-4 border-l-[3px] border-l-danger bg-surface rounded-r-lg text-small text-ink-soft animate-fade-in">
           <p className="font-medium text-ink">Search hit a snag.</p>
@@ -297,6 +341,7 @@ function WeHeard({
   if (filters.remote) entries.push({ key: "remote", label: "remote" });
   if (filters.salaryMin) entries.push({ key: "salaryMin", label: `≥$${filters.salaryMin.toLocaleString()}` });
   if (filters.skills) filters.skills.forEach((s) => entries.push({ key: "skills", label: s }));
+  if (filters.exclude) filters.exclude.forEach((s) => entries.push({ key: "exclude", label: s }));
   if (filters.freshnessDays) entries.push({ key: "freshnessDays", label: `last ${filters.freshnessDays}d` });
 
   if (entries.length === 0) return null;
