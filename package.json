@@ -47,12 +47,12 @@
     "@types/node": "^25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@vitest/coverage-v8": "^4.1.7",
-    "eslint": "^9",
+    "@vitest/coverage-v8": "^4.1.8",
+    "eslint": "^10",
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
-    "typescript": "^5",
+    "typescript": "^6",
     "vitest": "^4.1.7"
   }
 }
