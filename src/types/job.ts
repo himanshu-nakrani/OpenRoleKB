@@ -27,6 +27,7 @@ export interface ExaResult {
   salaryMinUsd?: number;
   salaryMaxUsd?: number;
   salaryRaw?: string;
+  dedupKey?: string;
 }
 
 export interface RerankItem {

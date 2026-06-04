@@ -10,9 +10,13 @@ export async function GET(req: NextRequest) {
 
   const url = new URL(req.url);
   const jobId = url.searchParams.get("jobId");
-  const target = url.searchParams.get("url");
+  if (!jobId) return new Response("invalid", { status: 400 });
 
-  if (!jobId || !target) return new Response("invalid", { status: 400 });
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: { url: true },
+  });
+  if (!job) return new Response("job not found", { status: 404 });
 
   if (ownerKey) {
     try {
@@ -24,6 +28,6 @@ export async function GET(req: NextRequest) {
     } catch {}
   }
 
-  // 302 to the real ATS
-  return Response.redirect(target, 302);
+  // 302 to the trusted ATS URL from DB (prevents open redirect)
+  return Response.redirect(job.url, 302);
 }

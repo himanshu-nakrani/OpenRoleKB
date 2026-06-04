@@ -53,9 +53,8 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
       const params = new URLSearchParams(window.location.search);
       const q = params.get("q");
       if (q && !query) {
-        setQuery(q);
-        // auto-run after mount
-        setTimeout(() => runSearch(), 50);
+        // auto-run with captured q to avoid stale closure in runSearch
+        setTimeout(() => runSearch(q), 50);
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,8 +85,8 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
     onStateChange(state);
   }, [state, onStateChange]);
 
-  async function runSearch(filters?: Filters) {
-    const q = query.trim();
+  async function runSearch(overrideQuery?: string, filters?: Filters) {
+    const q = (overrideQuery ?? query).trim();
     if (!q) return;
 
     // P2.7 basic URL persistence for query
@@ -226,7 +225,7 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
       (updated as Record<string, undefined>)[key] = undefined;
     }
     setSaved(false);
-    runSearch(updated);
+    runSearch(undefined, updated);
   }
 
   return (
@@ -293,9 +292,10 @@ export function SearchBox({ onStateChange }: SearchBoxProps) {
             e.preventDefault();
             const refine = (e.currentTarget.elements.namedItem("refine") as HTMLInputElement)?.value.trim();
             if (refine) {
-              setQuery((prev) => (prev ? prev + ", " + refine : refine));
-              // re-run with appended
-              setTimeout(() => runSearch(), 0);
+              const newQ = (query ? query + ", " + refine : refine);  // use current query for capture
+              setQuery(newQ);
+              // re-run with appended, pass explicitly to avoid closure issues
+              setTimeout(() => runSearch(newQ), 0);
             }
           }}
           className="mt-2 flex gap-2"

@@ -104,27 +104,6 @@ export default async function AdminHealth() {
     ? Math.round(searchEvents.reduce((s, e) => s + (e.totalMs || 0), 0) / searchEvents.length)
     : 0;
 
-  const cacheHitRate = searchLastHour.length
-    ? Math.round((searchLastHour.filter((e) => e.cacheHit).length / searchLastHour.length) * 100)
-    : 0;
-
-  const totalMsSortedHour = searchLastHour.map((e) => e.totalMs).sort((a, b) => a - b);
-  const totalMsSortedDay = searchEvents.map((e) => e.totalMs).sort((a, b) => a - b);
-  const p50 = percentile(totalMsSortedHour, 0.5);
-  const p95 = percentile(totalMsSortedHour, 0.95);
-  const p99 = percentile(totalMsSortedHour, 0.99);
-  const p95Day = percentile(totalMsSortedDay, 0.95);
-
-  const rerankFailures24 = searchEvents.filter((e) => e.rerankFailed).length;
-  const rerankFailureRate = searchEvents.length
-    ? Math.round((rerankFailures24 / searchEvents.length) * 10000) / 100
-    : 0;
-
-  const sumExaCost = searchEvents.reduce((s, e) => s + (e.exaCostUsd ?? 0), 0);
-  const sumLlmCost = searchEvents.reduce((s, e) => s + (e.llmCostUsd ?? 0), 0);
-  const totalCost24 = sumExaCost + sumLlmCost;
-  const costPerSearch = searchEvents.length ? totalCost24 / searchEvents.length : 0;
-
   // Volume sparkline buckets (24 × 1-hour buckets) — searches only for clarity
   const buckets = Array.from({ length: 24 }, (_, i) => {
     const start = now - (24 - i) * HOUR;
@@ -292,10 +271,4 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p className="text-h2 font-medium mt-1">{value}</p>
     </div>
   );
-}
-
-function percentile(sorted: number[], p: number): number {
-  if (sorted.length === 0) return 0;
-  const idx = Math.ceil(sorted.length * p) - 1;
-  return sorted[Math.max(0, Math.min(idx, sorted.length - 1))];
 }

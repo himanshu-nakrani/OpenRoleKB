@@ -12,9 +12,9 @@ import type { ExaResult, Filters } from "@/types/job";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-export async function POST(request: NextRequest) {
-  const cronSecret = request.headers.get("x-cron-secret");
-  if (cronSecret !== process.env.CRON_SECRET) {
+export async function GET(request: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || request.headers.get("x-cron-secret") !== cronSecret) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -70,45 +70,49 @@ export async function POST(request: NextRequest) {
           orderBy: { createdAt: "desc" },
         });
 
+        // Fix: previous newJobIds now stores the FULL snapshot of seen jobs (from previous tick's current).
+        // On first run, store full current as snapshot (delta 0, no email).
+        // On later runs, compute delta vs previous FULL set, then store the new FULL current snapshot.
         const previousJobIds = new Set(previousRun?.newJobIds || []);
         const currentJobIds = exaResults.map((j) => j.id);
-        const newJobIds = currentJobIds.filter((id) => !previousJobIds.has(id));
+        const deltaJobIds = currentJobIds.filter((id) => !previousJobIds.has(id));
         const isFirstRun = !previousRun;
 
         if (isFirstRun) {
           await prisma.savedSearchRun.create({
             data: {
               savedSearchId: savedSearch.id,
-              newJobIds: currentJobIds,
+              newJobIds: currentJobIds,  // store FULL snapshot
               deltaCount: 0,
             },
           });
-        } else if (newJobIds.length > 0) {
+        } else if (deltaJobIds.length > 0) {
           await prisma.savedSearchRun.create({
             data: {
               savedSearchId: savedSearch.id,
-              newJobIds,
-              deltaCount: newJobIds.length,
+              newJobIds: currentJobIds,  // store FULL current snapshot for next diff
+              deltaCount: deltaJobIds.length,
             },
           });
         }
 
         const now = new Date();
+        // Use cadence boundary for cooldown, not just < now (which is always true)
+        const cadenceBoundary = savedSearch.cadence === "daily" ? oneDayAgo : oneWeekAgo;
         const shouldAttemptEmail =
           !isFirstRun &&
-          newJobIds.length > 0 &&
-          (!savedSearch.lastNotifiedAt || savedSearch.lastNotifiedAt < now);
+          deltaJobIds.length > 0 &&
+          (!savedSearch.lastNotifiedAt || savedSearch.lastNotifiedAt < cadenceBoundary);
 
         const emailTarget = savedSearch.notifyEmail || savedSearch.user?.email;
         const targetEmail = process.env.EMAIL_TEST_MODE === "true" ? process.env.ADMIN_EMAIL : emailTarget;
 
         if (shouldAttemptEmail && targetEmail && resend && process.env.RESEND_FROM) {
-          // ... (email sending logic with retry — keep as-is for now)
           let sendSuccess = false;
           for (let attempt = 0; attempt < 2; attempt++) {
             try {
               const newJobsDetails = exaResults
-                .filter((j) => newJobIds.includes(j.id))
+                .filter((j) => deltaJobIds.includes(j.id))
                 .slice(0, 5)
                 .map((j) => ({
                   title: j.title,
@@ -123,7 +127,7 @@ export async function POST(request: NextRequest) {
                 from: process.env.RESEND_FROM,
                 to: targetEmail,
                 subject: `New jobs matching "${savedSearch.rawQuery}"`,
-                html: generateDigestEmailHtml(savedSearch.rawQuery, newJobIds.length, newJobsDetails, searchUrl),
+                html: generateDigestEmailHtml(savedSearch.rawQuery, deltaJobIds.length, newJobsDetails, searchUrl),
               });
 
               sendSuccess = true;
@@ -139,7 +143,7 @@ export async function POST(request: NextRequest) {
           }
           if (sendSuccess) {
             await prisma.savedSearch.update({ where: { id: savedSearch.id }, data: { lastNotifiedAt: now } });
-            await prisma.eventLog.create({ data: { evt: "digest_email_sent", ownerKey: savedSearch.anonId || savedSearch.userId, resultCount: newJobIds.length, parseMs: 0, exaMs: 0, rerankMs: 0, totalMs: 0, rerankFailed: false } });
+            await prisma.eventLog.create({ data: { evt: "digest_email_sent", ownerKey: savedSearch.anonId || savedSearch.userId, resultCount: deltaJobIds.length, parseMs: 0, exaMs: 0, rerankMs: 0, totalMs: 0, rerankFailed: false } });
             log.info({ evt: "digest_email_sent", savedSearchId: savedSearch.id, targetEmail });
           }
           await prisma.savedSearch.update({ where: { id: savedSearch.id }, data: { lastRunAt: now } });
@@ -148,9 +152,9 @@ export async function POST(request: NextRequest) {
         }
 
         await prisma.eventLog.create({
-          data: { evt: "saved_search_run_completed", ownerKey: savedSearch.anonId || savedSearch.userId, resultCount: newJobIds.length, parseMs: 0, exaMs: 0, rerankMs: 0, totalMs: 0, rerankFailed: false },
+          data: { evt: "saved_search_run_completed", ownerKey: savedSearch.anonId || savedSearch.userId, resultCount: deltaJobIds.length, parseMs: 0, exaMs: 0, rerankMs: 0, totalMs: 0, rerankFailed: false },
         });
-        log.info({ evt: "saved_search_run_completed", savedSearchId: savedSearch.id, newJobCount: newJobIds.length, isFirstRun });
+        log.info({ evt: "saved_search_run_completed", savedSearchId: savedSearch.id, newJobCount: deltaJobIds.length, isFirstRun });
       } catch (err) {
         captureRouteError(err, { route: "/api/cron/saved-search-run", savedSearchId: savedSearch.id, phase: "run" });
       }

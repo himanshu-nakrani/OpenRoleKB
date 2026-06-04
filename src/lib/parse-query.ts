@@ -55,9 +55,9 @@ export async function parseQuery(
   // Saves LLM cost/tokens/latency for common cases like "react engineer" or saved searches
   // that already have rich filters stored (merged later in cron).
   const FILTER_TRIGGERS =
-    /\b(remote|senior|junior|staff|lead|manager|director|vp|c-suite|intern|mid|level|eu|us|nyc|sf|berlin|fintech|crypto|blockchain|no |exclude|avoid|this (week|month|year)|last (24h|week|month)|posted|salary|\$\d|k\+|remote-first|work from|based in)\b/i;
+    /\b(remote|senior|junior|staff|lead|manager|director|vp|c-suite|intern|mid|level|eu|us|nyc|sf|berlin|london|paris|tokyo|singapore|toronto|sydney|fintech|crypto|blockchain|no |exclude|avoid|this (week|month|year)|last (24h|week|month)|posted|salary|\$\d|k\+|remote-first|work from|based in)\b/i;
 
-  if (trimmed.length > 0 && trimmed.length < 80 && !FILTER_TRIGGERS.test(trimmed) && trimmed.split(/\s+/).length <= 5) {
+  if (trimmed.length > 0 && trimmed.length < 80 && !FILTER_TRIGGERS.test(trimmed) && trimmed.split(/\s+/).length <= 5 && !/\b[A-Z][a-z]{2,}\b/.test(trimmed)) {
     return { filters: { role: trimmed }, rawQuery, tokens: 0 };
   }
 

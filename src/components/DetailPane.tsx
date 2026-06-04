@@ -85,7 +85,7 @@ export function DetailPane({ exaResults, reranked, selectedIdx, filters }: Detai
         </div>
         <div className="flex items-center gap-4 mt-4 flex-wrap">
           <a
-            href={`/api/click?jobId=${encodeURIComponent(job.id)}&url=${encodeURIComponent(job.url)}`}
+            href={`/api/click?jobId=${encodeURIComponent(job.id)}`}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent-dark text-accent-text text-small font-medium hover:brightness-110 active:brightness-90 active:scale-[0.98] transition-all duration-120"
           >
             Apply on {domain || "site"} <ExternalLink size={14} strokeWidth={2} aria-hidden />
