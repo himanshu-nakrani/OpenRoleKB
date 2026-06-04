@@ -11,6 +11,7 @@ export default async function AdminHealth() {
     redirect("/");
   }
 
+  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const HOUR = 60 * 60 * 1000;
   const DAY = 24 * HOUR;
@@ -103,17 +104,6 @@ export default async function AdminHealth() {
   const avgTotalMs = searchEvents.length
     ? Math.round(searchEvents.reduce((s, e) => s + (e.totalMs || 0), 0) / searchEvents.length)
     : 0;
-
-  // Volume sparkline buckets (24 × 1-hour buckets) — searches only for clarity
-  const buckets = Array.from({ length: 24 }, (_, i) => {
-    const start = now - (24 - i) * HOUR;
-    const end = start + HOUR;
-    return searchEvents.filter((e) => {
-      const t = e.createdAt.getTime();
-      return t >= start && t < end;
-    }).length;
-  });
-  const maxBucket = Math.max(1, ...buckets);
 
   // Latest eval run
   const latestRun = await prisma.evalRun.findFirst({

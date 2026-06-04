@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         const cached = await getCachedSearch(savedSearch.rawQuery, mergedFilters);
         let exaResults: ExaResult[] = [];
 
-        if (cached?.jobs?.length) {
+        if (cached && cached.jobs.length > 0) {
           exaResults = cached.jobs;
         } else {
           exaResults = await searchJobs(savedSearch.rawQuery, mergedFilters, signal);

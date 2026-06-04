@@ -28,6 +28,9 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      - name: Clean Next.js artifacts
+        run: rm -rf .next
+
       - name: Run contract tests
         # CRITICAL: do NOT set DATABASE_URL from production secrets here.
         # testcontainers provisions an ephemeral Postgres and overrides

@@ -13,13 +13,13 @@ import { CACHE_TTL_HOURS } from "@/lib/config";
 type L1Entry = { value: unknown; ts: number };
 const l1Cache = new Map<string, L1Entry>();
 const L1_TTL_MS = 60 * 1000; // 1 minute
-function getFromL1(key: string): unknown {
+function getFromL1(key: string): GetCachedSearchResult {
   const entry = l1Cache.get(key);
-  if (entry && Date.now() - entry.ts < L1_TTL_MS) return entry.value;
+  if (entry && Date.now() - entry.ts < L1_TTL_MS) return entry.value as GetCachedSearchResult;
   if (entry) l1Cache.delete(key);
   return null;
 }
-function setL1(key: string, value: unknown) {
+function setL1(key: string, value: GetCachedSearchResult) {
   l1Cache.set(key, { value, ts: Date.now() });
   // Opportunistic prune
   if (l1Cache.size > 2000) {
@@ -70,7 +70,14 @@ function adaptToExaShape(j: {
   };
 }
 
-export async function getCachedSearch(rawQuery: string, filters: Filters) {
+type GetCachedSearchResult = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  cache: any; // Prisma SearchCache (loose to avoid import complexity)
+  jobs: CachedJob[];
+  resultJobIds: string[];
+} | null;
+
+export async function getCachedSearch(rawQuery: string, filters: Filters): Promise<GetCachedSearchResult> {
   const queryHash = hashQuery(rawQuery, filters);
 
   // L1 first (very hot repeat queries within the same serverless instance)

@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
         const cached = await getCachedSearch(rawQuery, filters);
         cacheMs = Math.round(performance.now() - tCacheCheck);
 
-        if (cached?.jobs?.length) {
+        if (cached && cached.jobs.length > 0) {
           cacheHit = true;
           send("results", cached.jobs);
 
