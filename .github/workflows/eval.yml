@@ -29,7 +29,7 @@ jobs:
       EXA_API_KEY:  ${{ secrets.EVAL_EXA_API_KEY }}
       DEEPSEEK_API_KEY: ${{ secrets.EVAL_DEEPSEEK_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
