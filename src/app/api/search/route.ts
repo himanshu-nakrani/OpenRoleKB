@@ -14,7 +14,7 @@ import {
   MAX_QUERY_LENGTH,
   MIN_RERANK_SCORE,
   EXA_USD_PER_REQUEST,
-  DEEPSEEK_USD_PER_1K_TOKENS,
+  GEMINI_USD_PER_1K_TOKENS,
 } from "@/lib/config";
 import type { RerankItem, Filters } from "@/types/job";
 
@@ -233,12 +233,12 @@ export async function POST(request: NextRequest) {
 // Cost constants are now centralized in @/lib/config (single source of truth for
 // pricing, thresholds, and limits). Re-exported here for backward compat in tests
 // if needed; new code should import directly from config.
-export { EXA_USD_PER_REQUEST, DEEPSEEK_USD_PER_1K_TOKENS } from "@/lib/config";
+export { EXA_USD_PER_REQUEST, GEMINI_USD_PER_1K_TOKENS } from "@/lib/config";
 
 export function estimateLlmCostUsd(parseTokens?: number, rerankTokens?: number): number | undefined {
   const total = (parseTokens ?? 0) + (rerankTokens ?? 0);
   if (total === 0) return undefined;
-  return Math.round((total / 1000) * DEEPSEEK_USD_PER_1K_TOKENS * 1e6) / 1e6;
+  return Math.round((total / 1000) * GEMINI_USD_PER_1K_TOKENS * 1e6) / 1e6;
 }
 
 async function logMetrics(metrics: {

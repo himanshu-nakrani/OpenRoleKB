@@ -1,4 +1,5 @@
 import { getLLM } from "@/lib/llm";
+import { LLM_MODEL } from "@/lib/config";
 import type { ExaResult, RerankItem } from "@/types/job";
 import type OpenAI from "openai";
 import { RERANK_TEXT_CHARS } from "@/lib/config";
@@ -71,7 +72,7 @@ export async function rerankWithMetrics(
 
   const response = await llm.chat.completions.create(
     {
-      model: "deepseek-chat",
+      model: LLM_MODEL,
       max_tokens: 2000,
       temperature: 0,
       messages: [

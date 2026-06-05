@@ -21,7 +21,8 @@ export const MAX_QUERY_LENGTH = 1000;
 // Cost constants (public pricing as of 2026-06; verify before relying on dashboard $).
 // See also estimateLlmCostUsd and EventLog writes.
 export const EXA_USD_PER_REQUEST = 0.005; // $5 per 1k requests at searchAndContents tier (50 results = 1 request)
-export const DEEPSEEK_USD_PER_1K_TOKENS = 0.00027; // chat-v3 blended input+output
+export const LLM_MODEL = "gemini-2.0-flash";
+export const GEMINI_USD_PER_1K_TOKENS = 0.00015; // gemini-2.0-flash blended input+output
 
 // Cron / retention windows (days)
 export const CACHE_PURGE_DAYS = 7;

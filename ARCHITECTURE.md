@@ -12,7 +12,7 @@ User types a query
       │
       ▼
 ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│  DeepSeek    │──▶│     Exa      │──▶│   DeepSeek   │
+│   Gemini     │──▶│     Exa      │──▶│    Gemini    │
 │  parseQuery  │   │  searchJobs  │   │    rerank    │
 └──────────────┘   └──────────────┘   └──────────────┘
       │                  │                   │
@@ -127,8 +127,8 @@ See `prisma/schema.prisma` for the complete schema.
 
 - **Exa** for search: it is the only neural-search API that crawls career pages
   in near-real-time. Boolean indexes (LinkedIn, Indeed) lag by hours-to-days.
-- **DeepSeek** for parse + rerank: cheap (~$0.0002/search), fast (~700ms),
-  tool-calling support is solid. Swap-friendly — see `src/lib/llm.ts`.
+- **Google Gemini** (2.0 Flash) for parse + rerank: cheap (~$0.0001/search), fast (~700ms),
+  OpenAI-compatible tool-calling support. Swap-friendly — see `src/lib/llm.ts`.
 - **Postgres + Prisma**: standard, boring, easy to back up.
 - **Upstash Redis** for rate limiting: edge-friendly REST API, costs $0 for
   the volume we expect.
@@ -160,7 +160,7 @@ See `prisma/schema.prisma` for the complete schema.
 ## Testing strategy
 
 - **Unit**: pure functions (`hash`, `location`, `company`, `tokens` sync).
-- **Route**: full SSE-stream assertions with mocked Exa + DeepSeek (see
+- **Route**: full SSE-stream assertions with mocked Exa + Gemini (see
   `src/app/api/search/__tests__/route.test.ts`).
 - **Visual**: not automated yet. Manual smoke test in light + dark mode at
   desktop + mobile breakpoints before any visual PR.

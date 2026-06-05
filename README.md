@@ -20,10 +20,10 @@ OpenRoleKB is an open-source, AI-powered job search engine. Type a sentence abou
 
 ## Features
 
-- **Natural language querying** — DeepSeek extracts structured filters (role, seniority, skills, location, salary, remote preference, exclusions, freshness) from whatever you type
+- **Natural language querying** — Gemini extracts structured filters (role, seniority, skills, location, salary, remote preference, exclusions, freshness) from whatever you type
 - **Live neural search** — Exa crawls ATS career pages across greenhouse.io, lever.co, ashbyhq.com, workable, workday, smartrecruiters, bamboohr, recruitee, personio, teamtailor in real time
 - **LLM reranking** — Every result is scored 0–100 against your full query; sub-40% matches are filtered out
-- **6-hour caching** — Repeat queries skip the Exa + DeepSeek round trip
+- **6-hour caching** — Repeat queries skip the Exa + Gemini round trip
 - **Anonymous-first** — No account required. Saved searches persist by browser ID. Sign in to sync across devices.
 - **Server-Sent Events** — Results stream incrementally as they arrive
 - **Dark mode** — System-aware light/dark/auto toggle
@@ -38,7 +38,7 @@ User types query
       │
       ▼
 ┌──────────────┐     ┌──────────┐     ┌───────────┐
-│  DeepSeek    │────▶│   Exa    │────▶│  DeepSeek  │
+│  Gemini      │────▶│   Exa    │────▶│  Gemini    │
 │  Parse to    │     │  Search  │     │  Rerank    │
 │  filters     │     │  top 50  │     │  score 0-1 │
 └──────────────┘     └──────────┘     └───────────┘
@@ -69,7 +69,7 @@ git clone https://github.com/himanshu-nakrani/OpenRoleKB.git
 cd OpenRoleKB
 npm install
 cp .env.example .env
-# Fill in EXA_API_KEY, DEEPSEEK_API_KEY, DATABASE_URL, DIRECT_URL
+# Fill in EXA_API_KEY, GEMINI_API_KEY, DATABASE_URL, DIRECT_URL
 npx prisma db push
 npm run dev
 ```
@@ -81,7 +81,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - **Node.js** ≥ 20
 - **PostgreSQL** (Neon serverless recommended)
 - **Exa API key** — [exa.ai](https://exa.ai)
-- **DeepSeek API key** — [deepseek.com](https://deepseek.com)
+- **Gemini API key** — [Google AI Studio](https://aistudio.google.com/apikey)
 
 ### Optional services
 
@@ -98,7 +98,7 @@ Copy `.env.example` to `.env` and fill in:
 | Variable | Description |
 |----------|-------------|
 | `EXA_API_KEY` | Exa neural search API key |
-| `DEEPSEEK_API_KEY` | DeepSeek API key (OpenAI-compatible) |
+| `GEMINI_API_KEY` | Google Gemini API key (OpenAI-compatible) |
 | `DATABASE_URL` | Postgres pooled connection (runtime) |
 | `DIRECT_URL` | Postgres direct connection (migrations) |
 | `AUTH_SECRET` | NextAuth secret (`openssl rand -base64 32`) |
@@ -169,7 +169,7 @@ src/
     TransferCodeModal.tsx        # Anonymous-to-account data transfer
   lib/
     exa.ts                       # Exa client with ATS domain allowlist
-    llm.ts                       # DeepSeek client (OpenAI SDK)
+    llm.ts                       # Gemini client (OpenAI SDK)
     parse-query.ts               # NL → structured filter extraction
     rerank.ts                    # LLM rerank pass with sanitization
     cache.ts                     # Postgres cache helpers
@@ -214,7 +214,7 @@ Tests cover:
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS v4 |
 | Search API | Exa (neural web search) |
-| LLM | DeepSeek (OpenAI-compatible function calling) |
+| LLM | Google Gemini 2.0 Flash (OpenAI-compatible function calling) |
 | Database | Neon Postgres (serverless) |
 | ORM | Prisma 7 |
 | Auth | NextAuth v5 (email magic-link via Resend) |
@@ -252,7 +252,7 @@ Copyright © 2026 OpenRoleKB Contributors.
 ## Acknowledgements
 
 - [Exa](https://exa.ai) for the neural search API
-- [DeepSeek](https://deepseek.com) for cost-effective LLM inference
+- [Google Gemini](https://ai.google.dev/) for LLM inference
 - [Neon](https://neon.tech) for serverless Postgres
 - [Vercel](https://vercel.com) for the Next.js framework
 - [Upstash](https://upstash.com) for serverless Redis

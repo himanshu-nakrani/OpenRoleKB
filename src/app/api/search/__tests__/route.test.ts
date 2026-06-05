@@ -172,8 +172,8 @@ describe("POST /api/search", () => {
     mockGetCachedSearch.mockResolvedValue(null);
     mockParseQuery.mockResolvedValue({ filters: { role: "engineer" }, rawQuery: "engineer" });
     mockSearchJobs.mockResolvedValue(fixtures);
-    mockRerank.mockRejectedValue(new Error("DeepSeek timeout"));
-    mockRerankWithMetrics.mockRejectedValue(new Error("DeepSeek timeout"));
+    mockRerank.mockRejectedValue(new Error("Gemini timeout"));
+    mockRerankWithMetrics.mockRejectedValue(new Error("Gemini timeout"));
     mockCacheSearch.mockResolvedValue("cache-fallback");
 
     const req = new NextRequest("http://localhost/api/search", {

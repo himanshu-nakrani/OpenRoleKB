@@ -30,7 +30,7 @@ number on `/admin/health` → Quality.
   The eval never hits Exa during a regular run, so we're measuring **rerank quality
   alone**, not the live ATS landscape. Refresh deliberately with
   `npm run eval:snapshot`.
-- Each rerank call costs roughly the same as one production search (~3-4k DeepSeek
+- Each rerank call costs roughly the same as one production search (~3-4k Gemini
   tokens). 10 cases × nightly = ~$0.10/month at current pricing.
 
 ## Running locally
@@ -39,7 +39,7 @@ number on `/admin/health` → Quality.
 # Dry-run: synthetic rerank, no API calls. Useful when changing the harness itself.
 npm run eval:dry
 
-# Full run against your local DeepSeek key. Writes EvalRun rows to your local DB.
+# Full run against your local Gemini key. Writes EvalRun rows to your local DB.
 npm run eval
 
 # Single case
@@ -98,7 +98,7 @@ and on `workflow_dispatch`. It expects three repo secrets:
 |--------|-----|
 | `EVAL_DATABASE_URL` | Where EvalRun rows go. Recommend a dedicated DB / branch separate from production. |
 | `EVAL_EXA_API_KEY` | Only needed if `refresh_snapshots: true` is passed. |
-| `EVAL_DEEPSEEK_API_KEY` | Required. |
+| `EVAL_GEMINI_API_KEY` | Required. |
 
 A failing run does NOT block PRs (CI only verifies unit + contract). Quality
 regressions surface as artifact downloads + a red workflow badge on the eval job.

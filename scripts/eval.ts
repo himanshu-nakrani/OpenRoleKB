@@ -3,7 +3,7 @@
  * Search-quality eval runner.
  *
  * Usage:
- *   npx tsx scripts/eval.ts                     # uses Exa snapshots, real DeepSeek
+ *   npx tsx scripts/eval.ts                     # uses Exa snapshots, real Gemini
  *   npx tsx scripts/eval.ts --refresh-snapshots # re-fetches Exa for every case
  *   npx tsx scripts/eval.ts --case <name>       # run a single case
  *   npx tsx scripts/eval.ts --dry-run           # parse + score against synthetic rerank; no API calls
@@ -38,7 +38,7 @@ const REFRESH = flag("--refresh-snapshots");
 const NO_WRITE = flag("--no-write");
 const ONLY_CASE = argValue("--case");
 
-const DEEPSEEK_USD_PER_1K_TOKENS = 0.00027;
+const GEMINI_USD_PER_1K_TOKENS = 0.00015;
 
 async function exaForCase(c: GoldenCase): Promise<ExaResult[]> {
   if (DRY_RUN || (!REFRESH && hasSnapshot(c.query))) {
@@ -53,7 +53,7 @@ async function exaForCase(c: GoldenCase): Promise<ExaResult[]> {
 
 function syntheticRerank(exa: ExaResult[]): { items: RerankItem[]; tokens?: number } {
   // Deterministic synthetic: top half scored 0.8, bottom half 0.4. Used in --dry-run
-  // so the harness itself can be tested without paying for DeepSeek.
+  // so the harness itself can be tested without paying for Gemini.
   const items = exa.map((_, idx) => ({
     idx,
     score: idx < exa.length / 2 ? 0.8 : 0.4,
@@ -70,7 +70,7 @@ async function runCase(c: GoldenCase): Promise<CaseResult> {
     : await rerankWithMetrics(c.query, exa);
   const durationMs = Date.now() - t0;
   const tokens = r.tokens;
-  const costUsd = tokens != null ? (tokens / 1000) * DEEPSEEK_USD_PER_1K_TOKENS : undefined;
+  const costUsd = tokens != null ? (tokens / 1000) * GEMINI_USD_PER_1K_TOKENS : undefined;
   return scoreCase(c, exa, r.items, durationMs, tokens, costUsd);
 }
 

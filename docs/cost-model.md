@@ -2,17 +2,17 @@
 
 This document outlines the marginal cost per active user per month based on real telemetry from `EventLog.exaCostUsd` and `EventLog.llmCostUsd`.
 
-**Source of truth for the numbers used in code / dashboards**: `src/lib/config.ts` (EXA_USD_PER_REQUEST, DEEPSEEK_USD_PER_1K_TOKENS, etc.). Update this doc when they change.
+**Source of truth for the numbers used in code / dashboards**: `src/lib/config.ts` (EXA_USD_PER_REQUEST, GEMINI_USD_PER_1K_TOKENS, etc.). Update this doc when they change.
 
 ## Current Pricing Assumptions (as of 2026-06)
 - **Exa Search**: $0.005 per request (1 request = 50 results)
-- **DeepSeek Chat (v3)**: $0.00027 per 1K tokens (blended input + output)
+- **Gemini 2.0 Flash**: $0.00015 per 1K tokens (blended input + output)
 
 ## Cost Per Search Breakdown
 | Component | Avg Cost per Search | Notes |
 |-----------|---------------------|-------|
 | Exa API   | $0.005              | Flat rate per query |
-| DeepSeek  | ~$0.00015           | ~500 tokens avg (parse + rerank) |
+| Gemini    | ~$0.00008           | ~500 tokens avg (parse + rerank) |
 | **Total** | **~$0.00515**       | Per successful search |
 
 ## Monthly Cost per User by Search Volume
