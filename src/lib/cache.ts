@@ -166,6 +166,17 @@ export async function cacheSearch(
     const upsertedJobs = await Promise.all(jobPromises);
     const jobIds = upsertedJobs.map((j) => j.id);
 
+    // Rerank scores arrive keyed by transient Exa result ids; persist by stable Job.id
+    // so cache hits can look up scores with cached.resultJobIds (see search route + page).
+    const urlToJobId = new Map(upsertedJobs.map((j) => [j.url, j.id]));
+    const persistedRerankScores = Object.fromEntries(
+      results.flatMap((r) => {
+        const score = rerankScores[r.id];
+        const jobId = urlToJobId.get(r.url);
+        return score && jobId ? [[jobId, score] as const] : [];
+      }),
+    );
+
     const cache = await tx.searchCache.upsert({
       where: { queryHash },
       create: {
@@ -173,13 +184,13 @@ export async function cacheSearch(
         rawQuery,
         filters: filters as Prisma.InputJsonValue,
         resultJobIds: jobIds,
-        rerankScores: rerankScores as Prisma.InputJsonValue,
+        rerankScores: persistedRerankScores as Prisma.InputJsonValue,
       },
       update: {
         rawQuery,
         filters: filters as Prisma.InputJsonValue,
         resultJobIds: jobIds,
-        rerankScores: rerankScores as Prisma.InputJsonValue,
+        rerankScores: persistedRerankScores as Prisma.InputJsonValue,
         createdAt: new Date(),
       },
       select: { id: true },
