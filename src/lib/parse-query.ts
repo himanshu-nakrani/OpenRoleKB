@@ -61,9 +61,8 @@ export async function parseQuery(
     return { filters: { role: trimmed }, rawQuery, tokens: 0 };
   }
 
-  const llm = getLLM();
-
   try {
+    const llm = getLLM();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);
 

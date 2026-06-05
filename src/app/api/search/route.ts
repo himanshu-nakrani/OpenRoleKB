@@ -147,9 +147,11 @@ export async function POST(request: NextRequest) {
           send("done", { id: cached.cache.id });
 
           const totalMs = Math.round(performance.now() - t0);
-          void logMetrics({ ownerKey, cacheHit, resultCount, parseMs, exaMs: 0, rerankMs: 0, cacheMs, totalMs, rerankFailed, parseTokens, rerankTokens, exaCostUsd, llmCostUsd }).catch((err) => {
+          try {
+            await logMetrics({ ownerKey, cacheHit, resultCount, parseMs, exaMs: 0, rerankMs: 0, cacheMs, totalMs, rerankFailed, parseTokens, rerankTokens, exaCostUsd, llmCostUsd });
+          } catch (err) {
             captureRouteError(err, { route: "/api/search", ownerKey, phase: "cache" });
-          });
+          }
           return;
         }
 
@@ -204,9 +206,11 @@ export async function POST(request: NextRequest) {
         send("done", { id: cacheId });
 
         const totalMs = Math.round(performance.now() - t0);
-        void logMetrics({ ownerKey, cacheHit, resultCount, parseMs, exaMs, rerankMs, cacheMs: 0, totalMs, rerankFailed, parseTokens, rerankTokens, exaCostUsd, llmCostUsd }).catch((err) => {
+        try {
+          await logMetrics({ ownerKey, cacheHit, resultCount, parseMs, exaMs, rerankMs, cacheMs: 0, totalMs, rerankFailed, parseTokens, rerankTokens, exaCostUsd, llmCostUsd });
+        } catch (err) {
           captureRouteError(err, { route: "/api/search", ownerKey, phase: "cache" });
-        });
+        }
       } catch (err) {
         captureRouteError(err, { route: "/api/search", ownerKey, phase: "exa" });
         send("error", { message: err instanceof Error ? err.message : "Search failed" });
