@@ -387,6 +387,7 @@ export const ModelName = {
   Job: 'Job',
   SearchCache: 'SearchCache',
   SavedSearch: 'SavedSearch',
+  SavedSearchRun: 'SavedSearchRun',
   JobInteraction: 'JobInteraction',
   HiddenCompany: 'HiddenCompany',
   FeedbackEvent: 'FeedbackEvent',
@@ -412,7 +413,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "job" | "searchCache" | "savedSearch" | "jobInteraction" | "hiddenCompany" | "feedbackEvent" | "user" | "account" | "session" | "verificationToken" | "transferCode" | "evalRun" | "eventLog"
+    modelProps: "job" | "searchCache" | "savedSearch" | "savedSearchRun" | "jobInteraction" | "hiddenCompany" | "feedbackEvent" | "user" | "account" | "session" | "verificationToken" | "transferCode" | "evalRun" | "eventLog"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -635,6 +636,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.SavedSearchCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.SavedSearchCountAggregateOutputType> | number
+        }
+      }
+    }
+    SavedSearchRun: {
+      payload: Prisma.$SavedSearchRunPayload<ExtArgs>
+      fields: Prisma.SavedSearchRunFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SavedSearchRunFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SavedSearchRunPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SavedSearchRunFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SavedSearchRunPayload>
+        }
+        findFirst: {
+          args: Prisma.SavedSearchRunFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SavedSearchRunPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SavedSearchRunFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SavedSearchRunPayload>
+        }
+        findMany: {
+          args: Prisma.SavedSearchRunFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SavedSearchRunPayload>[]
+        }
+        create: {
+          args: Prisma.SavedSearchRunCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SavedSearchRunPayload>
+        }
+        createMany: {
+          args: Prisma.SavedSearchRunCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SavedSearchRunCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SavedSearchRunPayload>[]
+        }
+        delete: {
+          args: Prisma.SavedSearchRunDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SavedSearchRunPayload>
+        }
+        update: {
+          args: Prisma.SavedSearchRunUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SavedSearchRunPayload>
+        }
+        deleteMany: {
+          args: Prisma.SavedSearchRunDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SavedSearchRunUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SavedSearchRunUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SavedSearchRunPayload>[]
+        }
+        upsert: {
+          args: Prisma.SavedSearchRunUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SavedSearchRunPayload>
+        }
+        aggregate: {
+          args: Prisma.SavedSearchRunAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSavedSearchRun>
+        }
+        groupBy: {
+          args: Prisma.SavedSearchRunGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SavedSearchRunGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SavedSearchRunCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SavedSearchRunCountAggregateOutputType> | number
         }
       }
     }
@@ -1423,12 +1498,17 @@ export const JobScalarFieldEnum = {
   title: 'title',
   company: 'company',
   location: 'location',
+  locationRaw: 'locationRaw',
   isRemote: 'isRemote',
   description: 'description',
   publishedAt: 'publishedAt',
   source: 'source',
   firstSeenAt: 'firstSeenAt',
-  lastSeenAt: 'lastSeenAt'
+  lastSeenAt: 'lastSeenAt',
+  salaryMinUsd: 'salaryMinUsd',
+  salaryMaxUsd: 'salaryMaxUsd',
+  salaryRaw: 'salaryRaw',
+  dedupKey: 'dedupKey'
 } as const
 
 export type JobScalarFieldEnum = (typeof JobScalarFieldEnum)[keyof typeof JobScalarFieldEnum]
@@ -1454,10 +1534,25 @@ export const SavedSearchScalarFieldEnum = {
   queryHash: 'queryHash',
   rawQuery: 'rawQuery',
   filters: 'filters',
+  cadence: 'cadence',
+  lastRunAt: 'lastRunAt',
+  lastNotifiedAt: 'lastNotifiedAt',
+  notifyEmail: 'notifyEmail',
   createdAt: 'createdAt'
 } as const
 
 export type SavedSearchScalarFieldEnum = (typeof SavedSearchScalarFieldEnum)[keyof typeof SavedSearchScalarFieldEnum]
+
+
+export const SavedSearchRunScalarFieldEnum = {
+  id: 'id',
+  savedSearchId: 'savedSearchId',
+  newJobIds: 'newJobIds',
+  deltaCount: 'deltaCount',
+  createdAt: 'createdAt'
+} as const
+
+export type SavedSearchRunScalarFieldEnum = (typeof SavedSearchRunScalarFieldEnum)[keyof typeof SavedSearchRunScalarFieldEnum]
 
 
 export const JobInteractionScalarFieldEnum = {
@@ -1681,6 +1776,20 @@ export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaM
 
 
 /**
+ * Reference to a field of type 'Int'
+ */
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+/**
+ * Reference to a field of type 'Int[]'
+ */
+export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+/**
  * Reference to a field of type 'Json'
  */
 export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
@@ -1705,20 +1814,6 @@ export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, '
  * Reference to a field of type 'Float[]'
  */
 export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
-    
-
-
-/**
- * Reference to a field of type 'Int'
- */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
-
-
-/**
- * Reference to a field of type 'Int[]'
- */
-export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 /**
@@ -1834,6 +1929,7 @@ export type GlobalOmitConfig = {
   job?: Prisma.JobOmit
   searchCache?: Prisma.SearchCacheOmit
   savedSearch?: Prisma.SavedSearchOmit
+  savedSearchRun?: Prisma.SavedSearchRunOmit
   jobInteraction?: Prisma.JobInteractionOmit
   hiddenCompany?: Prisma.HiddenCompanyOmit
   feedbackEvent?: Prisma.FeedbackEventOmit

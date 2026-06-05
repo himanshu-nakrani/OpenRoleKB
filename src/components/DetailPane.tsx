@@ -3,21 +3,24 @@
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { ScoreChip } from "@/components/ScoreChip";
+import { FreshnessPill } from "@/components/FreshnessPill";
+import { StillListedBadge } from "@/components/StillListedBadge";
 import dynamic from "next/dynamic";
 const FeedbackModal = dynamic(
   () => import("@/components/FeedbackModal").then((m) => m.FeedbackModal),
   { ssr: false },
 );
 import { extractCompany } from "@/lib/company";
-import type { ExaResult, RerankItem } from "@/types/job";
+import type { ExaResult, RerankItem, Filters } from "@/types/job";
 
 interface DetailPaneProps {
   exaResults: ExaResult[];
   reranked: RerankItem[];
   selectedIdx: number | null;
+  filters?: Filters | null;
 }
 
-export function DetailPane({ exaResults, reranked, selectedIdx }: DetailPaneProps) {
+export function DetailPane({ exaResults, reranked, selectedIdx, filters }: DetailPaneProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   if (selectedIdx === null) {
@@ -56,37 +59,54 @@ export function DetailPane({ exaResults, reranked, selectedIdx }: DetailPaneProp
     try { return new URL(job.url).hostname.replace("www.", ""); } catch { return null; }
   })();
 
-  const currentFilters = (() => {
-    try {
-      const el = document.querySelector<HTMLDivElement>('[data-filters]');
-      if (el?.dataset.filters) return JSON.parse(el.dataset.filters);
-    } catch {}
-    return null;
-  })();
+  const currentFilters = filters ?? null; // prefer prop-drilled (avoids brittle DOM querySelector hack)
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div>
       <div className="max-w-[65ch] mx-auto">
       <div className="sticky top-0 bg-surface/95 backdrop-blur-sm z-10 pb-3 border-b border-border mb-6">
         <h2 className="text-h2 font-medium leading-snug font-display-opsz-h2">
           {job.title}
         </h2>
         <div className="flex flex-wrap items-center gap-2 text-small text-muted mt-2">
-          {[extractCompany(job.url) || job.author, job.publishedDate ? relativeDate(job.publishedDate) : null]
-            .filter(Boolean)
-            .map((s, i) => (
-              <span key={i}>{s}{i === 0 && job.publishedDate ? " · " : ""}</span>
-            ))}
+          {(extractCompany(job.url) || job.author) && (
+            <span>{extractCompany(job.url) || job.author}</span>
+          )}
+          {job.publishedDate && <FreshnessPill publishedDate={job.publishedDate} />}
+          {job.lastSeenAt && <StillListedBadge lastSeenAt={job.lastSeenAt} publishedDate={job.publishedDate} />}
+          {(job.salaryMinUsd || job.salaryMaxUsd) && (
+            <span className="text-accent">
+              {job.salaryMinUsd ? `$${Math.round(job.salaryMinUsd / 1000)}k` : ""}
+              {job.salaryMinUsd && job.salaryMaxUsd ? "–" : ""}
+              {job.salaryMaxUsd ? `$${Math.round(job.salaryMaxUsd / 1000)}k` : ""}
+              {job.salaryRaw ? " (est.)" : ""}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-4 mt-4 flex-wrap">
           <a
-            href={job.url}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`/api/click?jobId=${encodeURIComponent(job.id)}`}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent-dark text-accent-text text-small font-medium hover:brightness-110 active:brightness-90 active:scale-[0.98] transition-all duration-120"
           >
             Apply on {domain || "site"} <ExternalLink size={14} strokeWidth={2} aria-hidden />
           </a>
+          <button
+            onClick={async () => {
+              const company = extractCompany(job.url) || job.author;
+              if (!company) return;
+              try {
+                await fetch("/api/hidden-companies", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "x-anon-id": localStorage.getItem("openrolekb_anon_id") || "" },
+                  body: JSON.stringify({ company }),
+                });
+                alert(`Hidden ${company}. Future results will exclude it.`);
+              } catch {}
+            }}
+            className="text-small text-muted hover:text-ink px-3 py-2 border border-border rounded-full"
+          >
+            Hide company
+          </button>
           {job.score !== undefined && (
             <span className="flex items-center gap-2 text-small text-muted">
               <ScoreChip score={job.score} />
@@ -126,17 +146,6 @@ export function DetailPane({ exaResults, reranked, selectedIdx }: DetailPaneProp
       </div>
     </div>
   );
-}
-
-function relativeDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return "today";
-  if (diffDays === 1) return "1 day ago";
-  if (diffDays < 30) return diffDays + " days ago";
-  if (diffDays < 365) return Math.floor(diffDays / 30) + " months ago";
-  return Math.floor(diffDays / 365) + " years ago";
 }
 
 const BULLET_RX = /^\s*(?:[*\-•◦▪●·‣⁃]|\d+[.)])\s+/;

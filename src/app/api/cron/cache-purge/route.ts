@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { CACHE_PURGE_DAYS, ANON_DATA_RETENTION_DAYS } from "@/lib/config";
 
 export async function GET(req: NextRequest) {
   // Fail closed if CRON_SECRET is unset OR empty. A blank env var is a common
@@ -10,8 +11,8 @@ export async function GET(req: NextRequest) {
     return new Response("forbidden", { status: 403 });
   }
 
-  // Purge expired SearchCache entries (7 days)
-  const cacheCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  // Purge expired SearchCache entries (CACHE_PURGE_DAYS)
+  const cacheCutoff = new Date(Date.now() - CACHE_PURGE_DAYS * 24 * 60 * 60 * 1000);
   const { count: cacheCount } = await prisma.searchCache.deleteMany({
     where: { createdAt: { lt: cacheCutoff } },
   });
@@ -21,13 +22,13 @@ export async function GET(req: NextRequest) {
     where: { expiresAt: { lt: new Date() } },
   });
 
-  // Purge anon data older than 30 days (Q1 decision).
+  // Purge anon data older than ANON_DATA_RETENTION_DAYS (see config + privacy page).
   // Anon ownerKeys are UUIDs (contain "-"); user ids are cuids (no dashes).
   // We use raw SQL with `NOT IN (SELECT id FROM "User")` so Postgres does the
   // filter without round-tripping every user id into Node memory. The dash
   // check is the primary guard (cuids never contain "-"), and the subquery
   // is belt-and-suspenders for any future identity format change.
-  const anonCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const anonCutoff = new Date(Date.now() - ANON_DATA_RETENTION_DAYS * 24 * 60 * 60 * 1000);
 
   const { count: savedCount } = await prisma.savedSearch.deleteMany({
     where: {

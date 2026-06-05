@@ -54,6 +54,7 @@ export const ModelName = {
   Job: 'Job',
   SearchCache: 'SearchCache',
   SavedSearch: 'SavedSearch',
+  SavedSearchRun: 'SavedSearchRun',
   JobInteraction: 'JobInteraction',
   HiddenCompany: 'HiddenCompany',
   FeedbackEvent: 'FeedbackEvent',
@@ -88,12 +89,17 @@ export const JobScalarFieldEnum = {
   title: 'title',
   company: 'company',
   location: 'location',
+  locationRaw: 'locationRaw',
   isRemote: 'isRemote',
   description: 'description',
   publishedAt: 'publishedAt',
   source: 'source',
   firstSeenAt: 'firstSeenAt',
-  lastSeenAt: 'lastSeenAt'
+  lastSeenAt: 'lastSeenAt',
+  salaryMinUsd: 'salaryMinUsd',
+  salaryMaxUsd: 'salaryMaxUsd',
+  salaryRaw: 'salaryRaw',
+  dedupKey: 'dedupKey'
 } as const
 
 export type JobScalarFieldEnum = (typeof JobScalarFieldEnum)[keyof typeof JobScalarFieldEnum]
@@ -119,10 +125,25 @@ export const SavedSearchScalarFieldEnum = {
   queryHash: 'queryHash',
   rawQuery: 'rawQuery',
   filters: 'filters',
+  cadence: 'cadence',
+  lastRunAt: 'lastRunAt',
+  lastNotifiedAt: 'lastNotifiedAt',
+  notifyEmail: 'notifyEmail',
   createdAt: 'createdAt'
 } as const
 
 export type SavedSearchScalarFieldEnum = (typeof SavedSearchScalarFieldEnum)[keyof typeof SavedSearchScalarFieldEnum]
+
+
+export const SavedSearchRunScalarFieldEnum = {
+  id: 'id',
+  savedSearchId: 'savedSearchId',
+  newJobIds: 'newJobIds',
+  deltaCount: 'deltaCount',
+  createdAt: 'createdAt'
+} as const
+
+export type SavedSearchRunScalarFieldEnum = (typeof SavedSearchRunScalarFieldEnum)[keyof typeof SavedSearchRunScalarFieldEnum]
 
 
 export const JobInteractionScalarFieldEnum = {

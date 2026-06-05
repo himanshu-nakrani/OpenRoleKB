@@ -4,6 +4,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getOwnerIdentity, type OwnerIdentity } from "@/lib/owner";
 import { hashQuery } from "@/lib/hash";
 import { sanitizeFilters } from "@/lib/parse-query";
+import { MAX_QUERY_LENGTH } from "@/lib/config";
 import type { Prisma } from "../../../../generated/prisma/client";
 
 function identityFilter(identity: OwnerIdentity) {
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "rawQuery required" }, { status: 400 });
   }
 
-  if (rawQuery.length > 1000) {
+  if (rawQuery.length > MAX_QUERY_LENGTH) {
     return NextResponse.json({ error: "query too long" }, { status: 400 });
   }
 
@@ -102,4 +103,42 @@ export async function DELETE(request: NextRequest) {
   }
 
   return NextResponse.json({ deleted: true });
+}
+
+export async function PATCH(request: NextRequest) {
+  const identity = await getOwnerIdentity(request);
+  const { ok } = await rateLimit(request, identity?.key);
+  if (!ok) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+  }
+
+  if (!identity) {
+    return NextResponse.json({ error: "x-anon-id header required" }, { status: 400 });
+  }
+
+  const body = await request.json();
+  const { id, cadence, notifyEmail } = body;
+
+  if (!id) {
+    return NextResponse.json({ error: "id param required" }, { status: 400 });
+  }
+
+  if (cadence && !["off", "daily", "weekly"].includes(cadence)) {
+    return NextResponse.json({ error: "Invalid cadence" }, { status: 400 });
+  }
+
+  if (cadence !== "off" && identity.kind !== "user" && !notifyEmail) {
+    return NextResponse.json({ error: "Email required for anonymous saved searches with cadence" }, { status: 400 });
+  }
+
+  const updateData: Record<string, unknown> = {};
+  if (cadence !== undefined) updateData.cadence = cadence;
+  if (notifyEmail !== undefined) updateData.notifyEmail = notifyEmail;
+
+  const updated = await prisma.savedSearch.update({
+    where: { id, ...identityFilter(identity) },
+    data: updateData,
+  });
+
+  return NextResponse.json(updated);
 }

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { ScoreChip } from "@/components/ScoreChip";
+import { MIN_RERANK_SCORE } from "@/lib/config";
 
 export default async function SearchPage({
   params,
@@ -42,7 +43,7 @@ export default async function SearchPage({
         {cached.resultJobIds
           .filter((jobId) => {
             const s = scores[jobId];
-            return !s || s.score >= 0.4;
+            return !s || s.score >= MIN_RERANK_SCORE;
           })
           .map((jobId) => {
             const job = jobMap.get(jobId);
@@ -52,16 +53,23 @@ export default async function SearchPage({
             return (
               <a
                 key={job.id}
-                href={job.url}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`/api/click?jobId=${encodeURIComponent(job.id)}`}
                 className="block p-5 rounded-lg border border-border bg-surface shadow-card hover:bg-surface-2 hover:border-border-strong active:bg-surface-3 active:scale-[0.99] transition-all duration-120"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-ink truncate">{job.title}</h3>
                     {job.company && (
-                      <p className="text-small text-ink-soft mt-1">{job.company}</p>
+                      <p className="text-small text-ink-soft mt-1">
+                        {job.company}
+                        {(job.salaryMinUsd || job.salaryMaxUsd) ? (
+                          <span className="ml-2 text-accent">
+                            {job.salaryMinUsd ? `$${Math.round(job.salaryMinUsd / 1000)}k` : ""}
+                            {job.salaryMinUsd && job.salaryMaxUsd ? "–" : ""}
+                            {job.salaryMaxUsd ? `$${Math.round(job.salaryMaxUsd / 1000)}k` : ""}
+                          </span>
+                        ) : null}
+                      </p>
                     )}
                   </div>
                   {score && <ScoreChip score={score.score} />}

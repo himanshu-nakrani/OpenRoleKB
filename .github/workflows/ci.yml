@@ -31,6 +31,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Clean Next.js artifacts (prevent stale generated type validator issues)
+        run: rm -rf .next
+
       - name: Typecheck
         run: npx tsc --noEmit
 

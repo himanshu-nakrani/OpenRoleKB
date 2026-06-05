@@ -6,9 +6,16 @@ import { rerankWithMetrics } from "@/lib/rerank";
 import { rateLimit } from "@/lib/rate-limit";
 import { getOwnerKey } from "@/lib/owner";
 import { extractCompany } from "@/lib/company";
+import { extractSalary } from "@/lib/salary";
 import { captureRouteError } from "@/lib/observe";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import {
+  MAX_QUERY_LENGTH,
+  MIN_RERANK_SCORE,
+  EXA_USD_PER_REQUEST,
+  DEEPSEEK_USD_PER_1K_TOKENS,
+} from "@/lib/config";
 import type { RerankItem, Filters } from "@/types/job";
 
 function sse(event: string, data: unknown): string {
@@ -19,12 +26,13 @@ async function applyHiddenCompanies(
   ownerKey: string | null,
   reranked: RerankItem[],
   results: Array<{ url: string }>,
+  preloadedHidden?: Array<{ company: string }>,
 ): Promise<RerankItem[]> {
   if (!ownerKey) return reranked;
-  const hidden = await prisma.hiddenCompany.findMany({
+  const hidden = preloadedHidden ?? (await prisma.hiddenCompany.findMany({
     where: { ownerKey },
     select: { company: true },
-  });
+  }));
   if (!hidden.length) return reranked;
   const hiddenSet = new Set(hidden.map((h) => h.company.toLowerCase()));
   return reranked.filter((r) => {
@@ -64,7 +72,7 @@ export async function POST(request: NextRequest) {
   const rawQuery = body.query.trim();
   const filtersOverride = body.filters;
 
-  if (rawQuery.length > 1000) {
+  if (rawQuery.length > MAX_QUERY_LENGTH) {
     return new Response(JSON.stringify({ error: "query too long" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
@@ -92,6 +100,12 @@ export async function POST(request: NextRequest) {
       let llmCostUsd: number | undefined;
 
       try {
+        // Start hidden companies fetch early so the small DB query runs in parallel
+        // with the expensive parse/Exa/rerank or cache lookup (low-hanging latency win).
+        const hiddenPromise = ownerKey
+          ? prisma.hiddenCompany.findMany({ where: { ownerKey }, select: { company: true } }).catch(() => [])
+          : Promise.resolve([]);
+
         let filters: Filters;
         if (filtersOverride) {
           filters = sanitizeFilters(filtersOverride);
@@ -112,7 +126,7 @@ export async function POST(request: NextRequest) {
         const cached = await getCachedSearch(rawQuery, filters);
         cacheMs = Math.round(performance.now() - tCacheCheck);
 
-        if (cached?.jobs?.length) {
+        if (cached && cached.jobs.length > 0) {
           cacheHit = true;
           send("results", cached.jobs);
 
@@ -123,26 +137,34 @@ export async function POST(request: NextRequest) {
               score: scores[id]?.score ?? 0.5,
               fit: scores[id]?.fit ?? "",
             }))
-            .filter((r) => r.score >= 0.4);
+            .filter((r) => r.score >= MIN_RERANK_SCORE);
 
-          reranked = await applyHiddenCompanies(ownerKey, reranked, cached.jobs);
+          const hiddenForCache = await hiddenPromise;
+          reranked = await applyHiddenCompanies(ownerKey, reranked, cached.jobs, hiddenForCache);
 
           resultCount = reranked.length;
           send("rerank", reranked);
           send("done", { id: cached.cache.id });
 
           const totalMs = Math.round(performance.now() - t0);
-          void logMetrics({ ownerKey, cacheHit, resultCount, parseMs, exaMs: 0, rerankMs: 0, cacheMs, totalMs, rerankFailed, parseTokens, rerankTokens, exaCostUsd, llmCostUsd }).catch((err) => {
+          try {
+            await logMetrics({ ownerKey, cacheHit, resultCount, parseMs, exaMs: 0, rerankMs: 0, cacheMs, totalMs, rerankFailed, parseTokens, rerankTokens, exaCostUsd, llmCostUsd });
+          } catch (err) {
             captureRouteError(err, { route: "/api/search", ownerKey, phase: "cache" });
-          });
+          }
           return;
         }
 
         const tExa = performance.now();
-        const exaResults = await searchJobs(rawQuery, filters, request.signal);
+        let exaResults = await searchJobs(rawQuery, filters, request.signal);
         exaMs = Math.round(performance.now() - tExa);
         // Exa charges per 1k requests; 50 results in this app is a single request.
         exaCostUsd = EXA_USD_PER_REQUEST;
+        // Attach salary extraction for fresh results (P2)
+        exaResults = exaResults.map((r) => {
+          const sal = r.text ? extractSalary(r.text) : {};
+          return { ...r, salaryMinUsd: sal.min, salaryMaxUsd: sal.max, salaryRaw: sal.raw };
+        });
         send("results", exaResults);
 
         let reranked: RerankItem[] = [];
@@ -158,7 +180,7 @@ export async function POST(request: NextRequest) {
               .map((r) => [exaResults[r.idx]?.id, { score: r.score, fit: r.fit }] as const)
               .filter(([id]) => typeof id === "string"),
           );
-          reranked = reranked.filter((r) => r.score >= 0.4);
+          reranked = reranked.filter((r) => r.score >= MIN_RERANK_SCORE);
         } catch (err) {
           rerankFailed = true;
           captureRouteError(err, { route: "/api/search", ownerKey, phase: "rerank" });
@@ -167,7 +189,8 @@ export async function POST(request: NextRequest) {
 
         llmCostUsd = estimateLlmCostUsd(parseTokens, rerankTokens);
 
-        reranked = await applyHiddenCompanies(ownerKey, reranked, exaResults);
+        const hiddenForExa = await hiddenPromise;
+        reranked = await applyHiddenCompanies(ownerKey, reranked, exaResults, hiddenForExa);
 
         resultCount = reranked.length;
         send("rerank", reranked);
@@ -183,9 +206,11 @@ export async function POST(request: NextRequest) {
         send("done", { id: cacheId });
 
         const totalMs = Math.round(performance.now() - t0);
-        void logMetrics({ ownerKey, cacheHit, resultCount, parseMs, exaMs, rerankMs, cacheMs: 0, totalMs, rerankFailed, parseTokens, rerankTokens, exaCostUsd, llmCostUsd }).catch((err) => {
+        try {
+          await logMetrics({ ownerKey, cacheHit, resultCount, parseMs, exaMs, rerankMs, cacheMs: 0, totalMs, rerankFailed, parseTokens, rerankTokens, exaCostUsd, llmCostUsd });
+        } catch (err) {
           captureRouteError(err, { route: "/api/search", ownerKey, phase: "cache" });
-        });
+        }
       } catch (err) {
         captureRouteError(err, { route: "/api/search", ownerKey, phase: "exa" });
         send("error", { message: err instanceof Error ? err.message : "Search failed" });
@@ -205,10 +230,10 @@ export async function POST(request: NextRequest) {
   });
 }
 
-// Cost constants — update when provider pricing changes. Values reflect
-// public pricing as of 2026-06; verify before relying on dashboard $ numbers.
-const EXA_USD_PER_REQUEST = 0.005; // $5 per 1k requests at the searchAndContents tier
-const DEEPSEEK_USD_PER_1K_TOKENS = 0.00027; // chat-v3 blended input+output
+// Cost constants are now centralized in @/lib/config (single source of truth for
+// pricing, thresholds, and limits). Re-exported here for backward compat in tests
+// if needed; new code should import directly from config.
+export { EXA_USD_PER_REQUEST, DEEPSEEK_USD_PER_1K_TOKENS } from "@/lib/config";
 
 export function estimateLlmCostUsd(parseTokens?: number, rerankTokens?: number): number | undefined {
   const total = (parseTokens ?? 0) + (rerankTokens ?? 0);

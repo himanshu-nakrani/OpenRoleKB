@@ -10,10 +10,12 @@ const SignInModal = dynamic(
 );
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useMergeOnSignIn } from "@/hooks/useMergeOnSignIn";
+import { useSession } from "next-auth/react";
 
 export function AppHeader() {
   const [signInOpen, setSignInOpen] = useState(false);
   useMergeOnSignIn();
+  const { data: session } = useSession();
 
   return (
     <header className="sticky top-0 z-40 backdrop-blur-xl bg-bg/70 border-b border-border">
@@ -29,12 +31,14 @@ export function AppHeader() {
         </Link>
         <div className="flex items-center gap-3">
           <UserMenu />
-          <button
-            onClick={() => setSignInOpen(true)}
-            className="px-4 py-1.5 text-micro rounded-full border border-border text-muted hover:text-ink hover:border-accent/40 hover:bg-surface-2 active:bg-surface-3 active:scale-[0.98] transition-all duration-120"
-          >
-            Sign in
-          </button>
+          {!session && (
+            <button
+              onClick={() => setSignInOpen(true)}
+              className="px-4 py-1.5 text-micro rounded-full border border-border text-muted hover:text-ink hover:border-accent/40 hover:bg-surface-2 active:bg-surface-3 active:scale-[0.98] transition-all duration-120"
+            >
+              Sign in
+            </button>
+          )}
           <ThemeToggle />
         </div>
       </div>

@@ -1,0 +1,42 @@
+name: Contract Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Clean Next.js artifacts
+        run: rm -rf .next
+
+      - name: Run contract tests
+        # CRITICAL: do NOT set DATABASE_URL from production secrets here.
+        # testcontainers provisions an ephemeral Postgres and overrides
+        # DATABASE_URL inside the test. Setting it from a real secret would
+        # let the test's TRUNCATE statements wipe production data if the
+        # override ever raced.
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@127.0.0.1:5432/placeholder
+        run: npm run test:contract

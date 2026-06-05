@@ -30,6 +30,10 @@ export type SavedSearchMinAggregateOutputType = {
   userId: string | null
   queryHash: string | null
   rawQuery: string | null
+  cadence: string | null
+  lastRunAt: Date | null
+  lastNotifiedAt: Date | null
+  notifyEmail: string | null
   createdAt: Date | null
 }
 
@@ -39,6 +43,10 @@ export type SavedSearchMaxAggregateOutputType = {
   userId: string | null
   queryHash: string | null
   rawQuery: string | null
+  cadence: string | null
+  lastRunAt: Date | null
+  lastNotifiedAt: Date | null
+  notifyEmail: string | null
   createdAt: Date | null
 }
 
@@ -49,6 +57,10 @@ export type SavedSearchCountAggregateOutputType = {
   queryHash: number
   rawQuery: number
   filters: number
+  cadence: number
+  lastRunAt: number
+  lastNotifiedAt: number
+  notifyEmail: number
   createdAt: number
   _all: number
 }
@@ -60,6 +72,10 @@ export type SavedSearchMinAggregateInputType = {
   userId?: true
   queryHash?: true
   rawQuery?: true
+  cadence?: true
+  lastRunAt?: true
+  lastNotifiedAt?: true
+  notifyEmail?: true
   createdAt?: true
 }
 
@@ -69,6 +85,10 @@ export type SavedSearchMaxAggregateInputType = {
   userId?: true
   queryHash?: true
   rawQuery?: true
+  cadence?: true
+  lastRunAt?: true
+  lastNotifiedAt?: true
+  notifyEmail?: true
   createdAt?: true
 }
 
@@ -79,6 +99,10 @@ export type SavedSearchCountAggregateInputType = {
   queryHash?: true
   rawQuery?: true
   filters?: true
+  cadence?: true
+  lastRunAt?: true
+  lastNotifiedAt?: true
+  notifyEmail?: true
   createdAt?: true
   _all?: true
 }
@@ -162,6 +186,10 @@ export type SavedSearchGroupByOutputType = {
   queryHash: string
   rawQuery: string
   filters: runtime.JsonValue
+  cadence: string
+  lastRunAt: Date | null
+  lastNotifiedAt: Date | null
+  notifyEmail: string | null
   createdAt: Date
   _count: SavedSearchCountAggregateOutputType | null
   _min: SavedSearchMinAggregateOutputType | null
@@ -193,8 +221,13 @@ export type SavedSearchWhereInput = {
   queryHash?: Prisma.StringFilter<"SavedSearch"> | string
   rawQuery?: Prisma.StringFilter<"SavedSearch"> | string
   filters?: Prisma.JsonFilter<"SavedSearch">
+  cadence?: Prisma.StringFilter<"SavedSearch"> | string
+  lastRunAt?: Prisma.DateTimeNullableFilter<"SavedSearch"> | Date | string | null
+  lastNotifiedAt?: Prisma.DateTimeNullableFilter<"SavedSearch"> | Date | string | null
+  notifyEmail?: Prisma.StringNullableFilter<"SavedSearch"> | string | null
   createdAt?: Prisma.DateTimeFilter<"SavedSearch"> | Date | string
   user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  runs?: Prisma.SavedSearchRunListRelationFilter
 }
 
 export type SavedSearchOrderByWithRelationInput = {
@@ -204,8 +237,13 @@ export type SavedSearchOrderByWithRelationInput = {
   queryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   filters?: Prisma.SortOrder
+  cadence?: Prisma.SortOrder
+  lastRunAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastNotifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  notifyEmail?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
+  runs?: Prisma.SavedSearchRunOrderByRelationAggregateInput
 }
 
 export type SavedSearchWhereUniqueInput = Prisma.AtLeast<{
@@ -220,8 +258,13 @@ export type SavedSearchWhereUniqueInput = Prisma.AtLeast<{
   queryHash?: Prisma.StringFilter<"SavedSearch"> | string
   rawQuery?: Prisma.StringFilter<"SavedSearch"> | string
   filters?: Prisma.JsonFilter<"SavedSearch">
+  cadence?: Prisma.StringFilter<"SavedSearch"> | string
+  lastRunAt?: Prisma.DateTimeNullableFilter<"SavedSearch"> | Date | string | null
+  lastNotifiedAt?: Prisma.DateTimeNullableFilter<"SavedSearch"> | Date | string | null
+  notifyEmail?: Prisma.StringNullableFilter<"SavedSearch"> | string | null
   createdAt?: Prisma.DateTimeFilter<"SavedSearch"> | Date | string
   user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  runs?: Prisma.SavedSearchRunListRelationFilter
 }, "id" | "userId_queryHash" | "anonId_queryHash">
 
 export type SavedSearchOrderByWithAggregationInput = {
@@ -231,6 +274,10 @@ export type SavedSearchOrderByWithAggregationInput = {
   queryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   filters?: Prisma.SortOrder
+  cadence?: Prisma.SortOrder
+  lastRunAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastNotifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  notifyEmail?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.SavedSearchCountOrderByAggregateInput
   _max?: Prisma.SavedSearchMaxOrderByAggregateInput
@@ -247,6 +294,10 @@ export type SavedSearchScalarWhereWithAggregatesInput = {
   queryHash?: Prisma.StringWithAggregatesFilter<"SavedSearch"> | string
   rawQuery?: Prisma.StringWithAggregatesFilter<"SavedSearch"> | string
   filters?: Prisma.JsonWithAggregatesFilter<"SavedSearch">
+  cadence?: Prisma.StringWithAggregatesFilter<"SavedSearch"> | string
+  lastRunAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SavedSearch"> | Date | string | null
+  lastNotifiedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SavedSearch"> | Date | string | null
+  notifyEmail?: Prisma.StringNullableWithAggregatesFilter<"SavedSearch"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SavedSearch"> | Date | string
 }
 
@@ -256,8 +307,13 @@ export type SavedSearchCreateInput = {
   queryHash: string
   rawQuery: string
   filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: string
+  lastRunAt?: Date | string | null
+  lastNotifiedAt?: Date | string | null
+  notifyEmail?: string | null
   createdAt?: Date | string
   user?: Prisma.UserCreateNestedOneWithoutSavedSearchesInput
+  runs?: Prisma.SavedSearchRunCreateNestedManyWithoutSavedSearchInput
 }
 
 export type SavedSearchUncheckedCreateInput = {
@@ -267,7 +323,12 @@ export type SavedSearchUncheckedCreateInput = {
   queryHash: string
   rawQuery: string
   filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: string
+  lastRunAt?: Date | string | null
+  lastNotifiedAt?: Date | string | null
+  notifyEmail?: string | null
   createdAt?: Date | string
+  runs?: Prisma.SavedSearchRunUncheckedCreateNestedManyWithoutSavedSearchInput
 }
 
 export type SavedSearchUpdateInput = {
@@ -276,8 +337,13 @@ export type SavedSearchUpdateInput = {
   queryHash?: Prisma.StringFieldUpdateOperationsInput | string
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: Prisma.StringFieldUpdateOperationsInput | string
+  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastNotifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneWithoutSavedSearchesNestedInput
+  runs?: Prisma.SavedSearchRunUpdateManyWithoutSavedSearchNestedInput
 }
 
 export type SavedSearchUncheckedUpdateInput = {
@@ -287,7 +353,12 @@ export type SavedSearchUncheckedUpdateInput = {
   queryHash?: Prisma.StringFieldUpdateOperationsInput | string
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: Prisma.StringFieldUpdateOperationsInput | string
+  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastNotifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  runs?: Prisma.SavedSearchRunUncheckedUpdateManyWithoutSavedSearchNestedInput
 }
 
 export type SavedSearchCreateManyInput = {
@@ -297,6 +368,10 @@ export type SavedSearchCreateManyInput = {
   queryHash: string
   rawQuery: string
   filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: string
+  lastRunAt?: Date | string | null
+  lastNotifiedAt?: Date | string | null
+  notifyEmail?: string | null
   createdAt?: Date | string
 }
 
@@ -306,6 +381,10 @@ export type SavedSearchUpdateManyMutationInput = {
   queryHash?: Prisma.StringFieldUpdateOperationsInput | string
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: Prisma.StringFieldUpdateOperationsInput | string
+  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastNotifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -316,6 +395,10 @@ export type SavedSearchUncheckedUpdateManyInput = {
   queryHash?: Prisma.StringFieldUpdateOperationsInput | string
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: Prisma.StringFieldUpdateOperationsInput | string
+  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastNotifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -336,6 +419,10 @@ export type SavedSearchCountOrderByAggregateInput = {
   queryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   filters?: Prisma.SortOrder
+  cadence?: Prisma.SortOrder
+  lastRunAt?: Prisma.SortOrder
+  lastNotifiedAt?: Prisma.SortOrder
+  notifyEmail?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -345,6 +432,10 @@ export type SavedSearchMaxOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   queryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
+  cadence?: Prisma.SortOrder
+  lastRunAt?: Prisma.SortOrder
+  lastNotifiedAt?: Prisma.SortOrder
+  notifyEmail?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -354,7 +445,16 @@ export type SavedSearchMinOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   queryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
+  cadence?: Prisma.SortOrder
+  lastRunAt?: Prisma.SortOrder
+  lastNotifiedAt?: Prisma.SortOrder
+  notifyEmail?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+}
+
+export type SavedSearchScalarRelationFilter = {
+  is?: Prisma.SavedSearchWhereInput
+  isNot?: Prisma.SavedSearchWhereInput
 }
 
 export type SavedSearchListRelationFilter = {
@@ -365,6 +465,20 @@ export type SavedSearchListRelationFilter = {
 
 export type SavedSearchOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type SavedSearchCreateNestedOneWithoutRunsInput = {
+  create?: Prisma.XOR<Prisma.SavedSearchCreateWithoutRunsInput, Prisma.SavedSearchUncheckedCreateWithoutRunsInput>
+  connectOrCreate?: Prisma.SavedSearchCreateOrConnectWithoutRunsInput
+  connect?: Prisma.SavedSearchWhereUniqueInput
+}
+
+export type SavedSearchUpdateOneRequiredWithoutRunsNestedInput = {
+  create?: Prisma.XOR<Prisma.SavedSearchCreateWithoutRunsInput, Prisma.SavedSearchUncheckedCreateWithoutRunsInput>
+  connectOrCreate?: Prisma.SavedSearchCreateOrConnectWithoutRunsInput
+  upsert?: Prisma.SavedSearchUpsertWithoutRunsInput
+  connect?: Prisma.SavedSearchWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SavedSearchUpdateToOneWithWhereWithoutRunsInput, Prisma.SavedSearchUpdateWithoutRunsInput>, Prisma.SavedSearchUncheckedUpdateWithoutRunsInput>
 }
 
 export type SavedSearchCreateNestedManyWithoutUserInput = {
@@ -409,13 +523,90 @@ export type SavedSearchUncheckedUpdateManyWithoutUserNestedInput = {
   deleteMany?: Prisma.SavedSearchScalarWhereInput | Prisma.SavedSearchScalarWhereInput[]
 }
 
+export type SavedSearchCreateWithoutRunsInput = {
+  id?: string
+  anonId?: string | null
+  queryHash: string
+  rawQuery: string
+  filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: string
+  lastRunAt?: Date | string | null
+  lastNotifiedAt?: Date | string | null
+  notifyEmail?: string | null
+  createdAt?: Date | string
+  user?: Prisma.UserCreateNestedOneWithoutSavedSearchesInput
+}
+
+export type SavedSearchUncheckedCreateWithoutRunsInput = {
+  id?: string
+  anonId?: string | null
+  userId?: string | null
+  queryHash: string
+  rawQuery: string
+  filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: string
+  lastRunAt?: Date | string | null
+  lastNotifiedAt?: Date | string | null
+  notifyEmail?: string | null
+  createdAt?: Date | string
+}
+
+export type SavedSearchCreateOrConnectWithoutRunsInput = {
+  where: Prisma.SavedSearchWhereUniqueInput
+  create: Prisma.XOR<Prisma.SavedSearchCreateWithoutRunsInput, Prisma.SavedSearchUncheckedCreateWithoutRunsInput>
+}
+
+export type SavedSearchUpsertWithoutRunsInput = {
+  update: Prisma.XOR<Prisma.SavedSearchUpdateWithoutRunsInput, Prisma.SavedSearchUncheckedUpdateWithoutRunsInput>
+  create: Prisma.XOR<Prisma.SavedSearchCreateWithoutRunsInput, Prisma.SavedSearchUncheckedCreateWithoutRunsInput>
+  where?: Prisma.SavedSearchWhereInput
+}
+
+export type SavedSearchUpdateToOneWithWhereWithoutRunsInput = {
+  where?: Prisma.SavedSearchWhereInput
+  data: Prisma.XOR<Prisma.SavedSearchUpdateWithoutRunsInput, Prisma.SavedSearchUncheckedUpdateWithoutRunsInput>
+}
+
+export type SavedSearchUpdateWithoutRunsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  anonId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queryHash?: Prisma.StringFieldUpdateOperationsInput | string
+  rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
+  filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: Prisma.StringFieldUpdateOperationsInput | string
+  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastNotifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user?: Prisma.UserUpdateOneWithoutSavedSearchesNestedInput
+}
+
+export type SavedSearchUncheckedUpdateWithoutRunsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  anonId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  queryHash?: Prisma.StringFieldUpdateOperationsInput | string
+  rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
+  filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: Prisma.StringFieldUpdateOperationsInput | string
+  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastNotifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 export type SavedSearchCreateWithoutUserInput = {
   id?: string
   anonId?: string | null
   queryHash: string
   rawQuery: string
   filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: string
+  lastRunAt?: Date | string | null
+  lastNotifiedAt?: Date | string | null
+  notifyEmail?: string | null
   createdAt?: Date | string
+  runs?: Prisma.SavedSearchRunCreateNestedManyWithoutSavedSearchInput
 }
 
 export type SavedSearchUncheckedCreateWithoutUserInput = {
@@ -424,7 +615,12 @@ export type SavedSearchUncheckedCreateWithoutUserInput = {
   queryHash: string
   rawQuery: string
   filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: string
+  lastRunAt?: Date | string | null
+  lastNotifiedAt?: Date | string | null
+  notifyEmail?: string | null
   createdAt?: Date | string
+  runs?: Prisma.SavedSearchRunUncheckedCreateNestedManyWithoutSavedSearchInput
 }
 
 export type SavedSearchCreateOrConnectWithoutUserInput = {
@@ -463,6 +659,10 @@ export type SavedSearchScalarWhereInput = {
   queryHash?: Prisma.StringFilter<"SavedSearch"> | string
   rawQuery?: Prisma.StringFilter<"SavedSearch"> | string
   filters?: Prisma.JsonFilter<"SavedSearch">
+  cadence?: Prisma.StringFilter<"SavedSearch"> | string
+  lastRunAt?: Prisma.DateTimeNullableFilter<"SavedSearch"> | Date | string | null
+  lastNotifiedAt?: Prisma.DateTimeNullableFilter<"SavedSearch"> | Date | string | null
+  notifyEmail?: Prisma.StringNullableFilter<"SavedSearch"> | string | null
   createdAt?: Prisma.DateTimeFilter<"SavedSearch"> | Date | string
 }
 
@@ -472,6 +672,10 @@ export type SavedSearchCreateManyUserInput = {
   queryHash: string
   rawQuery: string
   filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: string
+  lastRunAt?: Date | string | null
+  lastNotifiedAt?: Date | string | null
+  notifyEmail?: string | null
   createdAt?: Date | string
 }
 
@@ -481,7 +685,12 @@ export type SavedSearchUpdateWithoutUserInput = {
   queryHash?: Prisma.StringFieldUpdateOperationsInput | string
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: Prisma.StringFieldUpdateOperationsInput | string
+  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastNotifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  runs?: Prisma.SavedSearchRunUpdateManyWithoutSavedSearchNestedInput
 }
 
 export type SavedSearchUncheckedUpdateWithoutUserInput = {
@@ -490,7 +699,12 @@ export type SavedSearchUncheckedUpdateWithoutUserInput = {
   queryHash?: Prisma.StringFieldUpdateOperationsInput | string
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: Prisma.StringFieldUpdateOperationsInput | string
+  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastNotifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  runs?: Prisma.SavedSearchRunUncheckedUpdateManyWithoutSavedSearchNestedInput
 }
 
 export type SavedSearchUncheckedUpdateManyWithoutUserInput = {
@@ -499,9 +713,42 @@ export type SavedSearchUncheckedUpdateManyWithoutUserInput = {
   queryHash?: Prisma.StringFieldUpdateOperationsInput | string
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  cadence?: Prisma.StringFieldUpdateOperationsInput | string
+  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastNotifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notifyEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+
+/**
+ * Count Type SavedSearchCountOutputType
+ */
+
+export type SavedSearchCountOutputType = {
+  runs: number
+}
+
+export type SavedSearchCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  runs?: boolean | SavedSearchCountOutputTypeCountRunsArgs
+}
+
+/**
+ * SavedSearchCountOutputType without action
+ */
+export type SavedSearchCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SavedSearchCountOutputType
+   */
+  select?: Prisma.SavedSearchCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * SavedSearchCountOutputType without action
+ */
+export type SavedSearchCountOutputTypeCountRunsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SavedSearchRunWhereInput
+}
 
 
 export type SavedSearchSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -511,8 +758,14 @@ export type SavedSearchSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   queryHash?: boolean
   rawQuery?: boolean
   filters?: boolean
+  cadence?: boolean
+  lastRunAt?: boolean
+  lastNotifiedAt?: boolean
+  notifyEmail?: boolean
   createdAt?: boolean
   user?: boolean | Prisma.SavedSearch$userArgs<ExtArgs>
+  runs?: boolean | Prisma.SavedSearch$runsArgs<ExtArgs>
+  _count?: boolean | Prisma.SavedSearchCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["savedSearch"]>
 
 export type SavedSearchSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -522,6 +775,10 @@ export type SavedSearchSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   queryHash?: boolean
   rawQuery?: boolean
   filters?: boolean
+  cadence?: boolean
+  lastRunAt?: boolean
+  lastNotifiedAt?: boolean
+  notifyEmail?: boolean
   createdAt?: boolean
   user?: boolean | Prisma.SavedSearch$userArgs<ExtArgs>
 }, ExtArgs["result"]["savedSearch"]>
@@ -533,6 +790,10 @@ export type SavedSearchSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   queryHash?: boolean
   rawQuery?: boolean
   filters?: boolean
+  cadence?: boolean
+  lastRunAt?: boolean
+  lastNotifiedAt?: boolean
+  notifyEmail?: boolean
   createdAt?: boolean
   user?: boolean | Prisma.SavedSearch$userArgs<ExtArgs>
 }, ExtArgs["result"]["savedSearch"]>
@@ -544,12 +805,18 @@ export type SavedSearchSelectScalar = {
   queryHash?: boolean
   rawQuery?: boolean
   filters?: boolean
+  cadence?: boolean
+  lastRunAt?: boolean
+  lastNotifiedAt?: boolean
+  notifyEmail?: boolean
   createdAt?: boolean
 }
 
-export type SavedSearchOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "anonId" | "userId" | "queryHash" | "rawQuery" | "filters" | "createdAt", ExtArgs["result"]["savedSearch"]>
+export type SavedSearchOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "anonId" | "userId" | "queryHash" | "rawQuery" | "filters" | "cadence" | "lastRunAt" | "lastNotifiedAt" | "notifyEmail" | "createdAt", ExtArgs["result"]["savedSearch"]>
 export type SavedSearchInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.SavedSearch$userArgs<ExtArgs>
+  runs?: boolean | Prisma.SavedSearch$runsArgs<ExtArgs>
+  _count?: boolean | Prisma.SavedSearchCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type SavedSearchIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.SavedSearch$userArgs<ExtArgs>
@@ -562,6 +829,7 @@ export type $SavedSearchPayload<ExtArgs extends runtime.Types.Extensions.Interna
   name: "SavedSearch"
   objects: {
     user: Prisma.$UserPayload<ExtArgs> | null
+    runs: Prisma.$SavedSearchRunPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -570,6 +838,10 @@ export type $SavedSearchPayload<ExtArgs extends runtime.Types.Extensions.Interna
     queryHash: string
     rawQuery: string
     filters: runtime.JsonValue
+    cadence: string
+    lastRunAt: Date | null
+    lastNotifiedAt: Date | null
+    notifyEmail: string | null
     createdAt: Date
   }, ExtArgs["result"]["savedSearch"]>
   composites: {}
@@ -966,6 +1238,7 @@ readonly fields: SavedSearchFieldRefs;
 export interface Prisma__SavedSearchClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   user<T extends Prisma.SavedSearch$userArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SavedSearch$userArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  runs<T extends Prisma.SavedSearch$runsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SavedSearch$runsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SavedSearchRunPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1001,6 +1274,10 @@ export interface SavedSearchFieldRefs {
   readonly queryHash: Prisma.FieldRef<"SavedSearch", 'String'>
   readonly rawQuery: Prisma.FieldRef<"SavedSearch", 'String'>
   readonly filters: Prisma.FieldRef<"SavedSearch", 'Json'>
+  readonly cadence: Prisma.FieldRef<"SavedSearch", 'String'>
+  readonly lastRunAt: Prisma.FieldRef<"SavedSearch", 'DateTime'>
+  readonly lastNotifiedAt: Prisma.FieldRef<"SavedSearch", 'DateTime'>
+  readonly notifyEmail: Prisma.FieldRef<"SavedSearch", 'String'>
   readonly createdAt: Prisma.FieldRef<"SavedSearch", 'DateTime'>
 }
     
@@ -1419,6 +1696,30 @@ export type SavedSearch$userArgs<ExtArgs extends runtime.Types.Extensions.Intern
    */
   include?: Prisma.UserInclude<ExtArgs> | null
   where?: Prisma.UserWhereInput
+}
+
+/**
+ * SavedSearch.runs
+ */
+export type SavedSearch$runsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SavedSearchRun
+   */
+  select?: Prisma.SavedSearchRunSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SavedSearchRun
+   */
+  omit?: Prisma.SavedSearchRunOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SavedSearchRunInclude<ExtArgs> | null
+  where?: Prisma.SavedSearchRunWhereInput
+  orderBy?: Prisma.SavedSearchRunOrderByWithRelationInput | Prisma.SavedSearchRunOrderByWithRelationInput[]
+  cursor?: Prisma.SavedSearchRunWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SavedSearchRunScalarFieldEnum | Prisma.SavedSearchRunScalarFieldEnum[]
 }
 
 /**

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import type { Filters } from "@/types/job";
 
 const KINDS = [
   { value: "wrong_role", label: "Wrong role" },
@@ -15,7 +16,7 @@ interface FeedbackModalProps {
   onClose: () => void;
   jobId: string;
   rawQuery: string;
-  filters: Record<string, unknown> | null;
+  filters: Filters | null;
   rerankScore: number | null;
   fit: string | null;
 }
