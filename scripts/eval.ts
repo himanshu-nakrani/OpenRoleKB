@@ -38,7 +38,7 @@ const REFRESH = flag("--refresh-snapshots");
 const NO_WRITE = flag("--no-write");
 const ONLY_CASE = argValue("--case");
 
-const GEMINI_USD_PER_1K_TOKENS = 0.00015;
+const GEMINI_USD_PER_1K_TOKENS = 0.0014;
 
 async function exaForCase(c: GoldenCase): Promise<ExaResult[]> {
   if (DRY_RUN || (!REFRESH && hasSnapshot(c.query))) {

@@ -76,6 +76,7 @@ export async function parseQuery(
         model: LLM_MODEL,
         max_tokens: 500,
         temperature: 0,
+        reasoning_effort: "none",
         messages: [
           {
             role: "system",

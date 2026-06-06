@@ -75,6 +75,7 @@ export async function rerankWithMetrics(
       model: LLM_MODEL,
       max_tokens: 2000,
       temperature: 0,
+      reasoning_effort: "none",
       messages: [
         { role: "system", content: RERANK_RUBRIC },
         { role: "user", content: `User query: "${rawQuery}"\n\nRate these job postings:\n\n${resultsList}` },

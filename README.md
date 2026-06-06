@@ -214,7 +214,7 @@ Tests cover:
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS v4 |
 | Search API | Exa (neural web search) |
-| LLM | Google Gemini 2.0 Flash (OpenAI-compatible function calling) |
+| LLM | Google Gemini Flash (`gemini-flash-latest`, OpenAI-compatible function calling) |
 | Database | Neon Postgres (serverless) |
 | ORM | Prisma 7 |
 | Auth | NextAuth v5 (email magic-link via Resend) |
