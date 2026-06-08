@@ -21,7 +21,13 @@ export const MAX_QUERY_LENGTH = 1000;
 // Cost constants (public pricing as of 2026-06; verify before relying on dashboard $).
 // See also estimateLlmCostUsd and EventLog writes.
 export const EXA_USD_PER_REQUEST = 0.005; // $5 per 1k requests at searchAndContents tier (50 results = 1 request)
-export const DEEPSEEK_USD_PER_1K_TOKENS = 0.00027; // chat-v3 blended input+output
+// gemini-flash-latest is a floating alias maintained by Google to point at the
+// current production Flash model (today: 2.5-flash). We disable "thinking"
+// tokens via reasoning_effort:"none" on each call so output isn't starved.
+export const LLM_MODEL = "gemini-flash-latest";
+// Blended ~ (input + output) / 2 at 2.5-flash public pricing
+// ($0.30/M input + $2.50/M output ≈ $1.40/M ≈ $0.0014/1k).
+export const GEMINI_USD_PER_1K_TOKENS = 0.0014;
 
 // Cron / retention windows (days)
 export const CACHE_PURGE_DAYS = 7;

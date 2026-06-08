@@ -124,7 +124,8 @@ export async function cacheSearch(
 ): Promise<string> {
   const queryHash = hashQuery(rawQuery, filters);
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(
+    async (tx) => {
     const jobPromises = results.map(async (r) => {
       const { location: rawLoc, isRemote } = r.text ? extractLocation(r.text) : { location: null, isRemote: false };
       const location = normalizeLocation(rawLoc);
@@ -197,5 +198,12 @@ export async function cacheSearch(
     });
 
     return cache.id;
-  });
+    },
+    {
+      // Default 5s is too tight: cold Neon connections + 50 parallel job upserts
+      // routinely take 5–8s. Bump to 20s so cache writes don't silently fail.
+      timeout: 20_000,
+      maxWait: 5_000,
+    },
+  );
 }

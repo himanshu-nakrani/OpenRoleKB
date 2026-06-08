@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { parseQuery, sanitizeFilters } from "@/lib/parse-query";
-import { searchJobs } from "@/lib/exa";
+import { searchJobsWithReport } from "@/lib/exa";
 import { getCachedSearch, cacheSearch } from "@/lib/cache";
 import { rerankWithMetrics } from "@/lib/rerank";
 import { rateLimit } from "@/lib/rate-limit";
@@ -14,7 +14,7 @@ import {
   MAX_QUERY_LENGTH,
   MIN_RERANK_SCORE,
   EXA_USD_PER_REQUEST,
-  DEEPSEEK_USD_PER_1K_TOKENS,
+  GEMINI_USD_PER_1K_TOKENS,
 } from "@/lib/config";
 import type { RerankItem, Filters } from "@/types/job";
 
@@ -156,10 +156,18 @@ export async function POST(request: NextRequest) {
         }
 
         const tExa = performance.now();
-        let exaResults = await searchJobs(rawQuery, filters, request.signal);
+        const exaResp = await searchJobsWithReport(rawQuery, filters, request.signal);
+        let exaResults = exaResp.results;
         exaMs = Math.round(performance.now() - tExa);
         // Exa charges per 1k requests; 50 results in this app is a single request.
         exaCostUsd = EXA_USD_PER_REQUEST;
+        log.info({
+          evt: "retrieval_quality",
+          route: "/api/search",
+          kept: exaResp.quality.kept,
+          rejected_denylist: exaResp.quality.denylist_path,
+          ats_listing_not_individual: exaResp.quality.ats_url_not_individual_job,
+        });
         // Attach salary extraction for fresh results (P2)
         exaResults = exaResults.map((r) => {
           const sal = r.text ? extractSalary(r.text) : {};
@@ -233,12 +241,12 @@ export async function POST(request: NextRequest) {
 // Cost constants are now centralized in @/lib/config (single source of truth for
 // pricing, thresholds, and limits). Re-exported here for backward compat in tests
 // if needed; new code should import directly from config.
-export { EXA_USD_PER_REQUEST, DEEPSEEK_USD_PER_1K_TOKENS } from "@/lib/config";
+export { EXA_USD_PER_REQUEST, GEMINI_USD_PER_1K_TOKENS } from "@/lib/config";
 
 export function estimateLlmCostUsd(parseTokens?: number, rerankTokens?: number): number | undefined {
   const total = (parseTokens ?? 0) + (rerankTokens ?? 0);
   if (total === 0) return undefined;
-  return Math.round((total / 1000) * DEEPSEEK_USD_PER_1K_TOKENS * 1e6) / 1e6;
+  return Math.round((total / 1000) * GEMINI_USD_PER_1K_TOKENS * 1e6) / 1e6;
 }
 
 async function logMetrics(metrics: {

@@ -2,36 +2,36 @@
 
 This document outlines the marginal cost per active user per month based on real telemetry from `EventLog.exaCostUsd` and `EventLog.llmCostUsd`.
 
-**Source of truth for the numbers used in code / dashboards**: `src/lib/config.ts` (EXA_USD_PER_REQUEST, DEEPSEEK_USD_PER_1K_TOKENS, etc.). Update this doc when they change.
+**Source of truth for the numbers used in code / dashboards**: `src/lib/config.ts` (EXA_USD_PER_REQUEST, GEMINI_USD_PER_1K_TOKENS, etc.). Update this doc when they change.
 
 ## Current Pricing Assumptions (as of 2026-06)
 - **Exa Search**: $0.005 per request (1 request = 50 results)
-- **DeepSeek Chat (v3)**: $0.00027 per 1K tokens (blended input + output)
+- **Gemini Flash (latest, ≈ 2.5-flash)**: ~$0.0014 per 1K tokens (blended input + output, $0.30/M in + $2.50/M out)
 
 ## Cost Per Search Breakdown
 | Component | Avg Cost per Search | Notes |
 |-----------|---------------------|-------|
 | Exa API   | $0.005              | Flat rate per query |
-| DeepSeek  | ~$0.00015           | ~500 tokens avg (parse + rerank) |
-| **Total** | **~$0.00515**       | Per successful search |
+| Gemini    | ~$0.0051            | ~3.6k tokens avg (parse ≈150, rerank ≈3500 at 50 results) |
+| **Total** | **~$0.0101**        | Per successful search |
 
 ## Monthly Cost per User by Search Volume
 | Searches / Month | Exa Cost | LLM Cost | Total Marginal Cost |
 |------------------|----------|----------|---------------------|
-| 10               | $0.05    | $0.0015  | **$0.0515**         |
-| 30               | $0.15    | $0.0045  | **$0.1545**         |
-| 100              | $0.50    | $0.0150  | **$0.5150**         |
+| 10               | $0.050   | $0.051   | **$0.101**          |
+| 30               | $0.150   | $0.153   | **$0.303**          |
+| 100              | $0.500   | $0.510   | **$1.010**          |
 
 ## Gross Margin at Proposed Price Points
 | Tier  | Price / Mo | Searches Included | Marginal Cost (30 searches) | Gross Margin |
 |-------|------------|-------------------|-----------------------------|--------------|
-| Free  | $0         | 30                | $0.15                       | N/A (Loss leader) |
-| Plus  | $8         | Unlimited         | ~$0.50 (est. 100 searches)  | **~94%**     |
-| Pro   | $24        | Unlimited + API   | ~$1.50 (est. 300 searches)  | **~94%**     |
+| Free  | $0         | 30                | $0.30                       | N/A (Loss leader) |
+| Plus  | $8         | Unlimited         | ~$1.01 (est. 100 searches)  | **~87%**     |
+| Pro   | $24        | Unlimited + API   | ~$3.03 (est. 300 searches)  | **~87%**     |
 
 ## Key Takeaways
-1. Free tier marginal cost is well below the $0.50/month threshold at 30 searches/month.
-2. LLM costs are negligible compared to Exa search costs.
-3. The proposed pricing provides >90% gross margins even at high usage volumes.
+1. Free tier marginal cost (~$0.30 at 30 searches/month) is still below $0.50, but the buffer is much tighter than the previous DeepSeek model afforded — watch the free-tier ceiling.
+2. LLM cost is now comparable to Exa per search (Gemini ≈ Exa), no longer negligible. If margin pressure shows up, consider `gemini-2.5-flash-lite` for the rerank pass.
+3. Proposed pricing still clears 85%+ gross margins; revisit if Gemini raises prices or rerank token usage drifts upward.
 
 *Note: Update these numbers monthly using the `/admin/health` dashboard or direct DB queries.*

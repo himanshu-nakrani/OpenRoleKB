@@ -1,4 +1,5 @@
 import { getLLM } from "@/lib/llm";
+import { LLM_MODEL } from "@/lib/config";
 import type { Filters } from "@/types/job";
 import type OpenAI from "openai";
 
@@ -72,9 +73,10 @@ export async function parseQuery(
 
     const response = await llm.chat.completions.create(
       {
-        model: "deepseek-chat",
+        model: LLM_MODEL,
         max_tokens: 500,
         temperature: 0,
+        reasoning_effort: "none",
         messages: [
           {
             role: "system",

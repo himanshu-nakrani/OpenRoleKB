@@ -1,6 +1,7 @@
 import Exa from "exa-js";
 import type { Filters, ExaResult } from "@/types/job";
 import { EXA_NUM_RESULTS } from "@/lib/config";
+import { filterResults, type FilterReport } from "@/lib/retrieval-quality";
 
 const ATS_DOMAINS = [
   "greenhouse.io",
@@ -49,11 +50,11 @@ function buildQueryString(filters: Filters): string {
   return q;
 }
 
-export async function searchJobs(
+export async function searchJobsWithReport(
   query: string,
   filters: Filters,
   signal?: AbortSignal,
-): Promise<ExaResult[]> {
+): Promise<{ results: ExaResult[]; quality: FilterReport["counts"] }> {
   const exa = getExa();
   const queryStr = buildQueryString(filters);
 
@@ -77,10 +78,12 @@ export async function searchJobs(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const response = await exa.searchAndContents(queryStr, { ...params, signal } as any);
 
-  if (!response.results?.length) return [];
+  if (!response.results?.length) {
+    return { results: [], quality: { kept: 0, denylist_path: 0, ats_url_not_individual_job: 0, no_signals: 0 } };
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return response.results.map((r: any) => ({
+  const raw: ExaResult[] = response.results.map((r: any) => ({
     id: r.id,
     title: r.title || "Untitled",
     url: r.url,
@@ -89,4 +92,19 @@ export async function searchJobs(
     publishedDate: r.publishedDate,
     author: r.author,
   }));
+
+  // Drop denylisted URLs (Ashby /blog/, /resources/, Workable /post-jobs-for-free/, etc.)
+  // before they consume rerank budget. Keep ATS listings and unknown hosts —
+  // the LLM reranker handles ambiguous cases better than a hard rule would.
+  const report = filterResults(raw);
+  return { results: report.kept, quality: report.counts };
+}
+
+export async function searchJobs(
+  query: string,
+  filters: Filters,
+  signal?: AbortSignal,
+): Promise<ExaResult[]> {
+  const { results } = await searchJobsWithReport(query, filters, signal);
+  return results;
 }

@@ -12,6 +12,8 @@ const rerankFixture = JSON.parse(
 
 const mockParseQuery = vi.fn();
 const mockSearchJobs = vi.fn();
+const mockSearchJobsWithReport = vi.fn();
+const EMPTY_QUALITY = { kept: 0, denylist_path: 0, ats_url_not_individual_job: 0, no_signals: 0 };
 const mockRerankWithMetrics = vi.fn();
 const mockCacheSearch = vi.fn();
 const mockGetCachedSearch = vi.fn();
@@ -19,7 +21,10 @@ const mockRateLimit = vi.fn();
 const mockEventLogCreate = vi.fn().mockResolvedValue({});
 
 vi.mock("@/lib/parse-query", () => ({ parseQuery: mockParseQuery, sanitizeFilters: (f: unknown) => f }));
-vi.mock("@/lib/exa", () => ({ searchJobs: mockSearchJobs }));
+vi.mock("@/lib/exa", () => ({
+  searchJobs: mockSearchJobs,
+  searchJobsWithReport: mockSearchJobsWithReport,
+}));
 vi.mock("@/lib/rerank", () => ({ rerankWithMetrics: mockRerankWithMetrics }));
 vi.mock("@/lib/cache", () => ({ cacheSearch: mockCacheSearch, getCachedSearch: mockGetCachedSearch }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: mockRateLimit }));
@@ -73,6 +78,7 @@ describe("budget — cost + token tracking", () => {
     mockGetCachedSearch.mockResolvedValue(null);
     mockParseQuery.mockResolvedValue({ filters: { role: "x" }, rawQuery: "x", tokens: 180 });
     mockSearchJobs.mockResolvedValue(fixtures);
+    mockSearchJobsWithReport.mockResolvedValue({ results: fixtures, quality: EMPTY_QUALITY });
     mockRerankWithMetrics.mockResolvedValue({ items: rerankFixture, tokens: 3200 });
     mockCacheSearch.mockResolvedValue("c-1");
   });
@@ -101,7 +107,7 @@ describe("budget — cost + token tracking", () => {
     const res = await POST(makeReq({ query: "x" }));
     await readSSE(res);
 
-    expect(mockSearchJobs).not.toHaveBeenCalled();
+    expect(mockSearchJobsWithReport).not.toHaveBeenCalled();
     expect(mockRerankWithMetrics).not.toHaveBeenCalled();
     const data = mockEventLogCreate.mock.calls[0][0].data;
     expect(data.exaMs).toBe(0);
@@ -134,6 +140,7 @@ describe("budget — latency budgets (synthetic timing)", () => {
     mockGetCachedSearch.mockResolvedValue(null);
     mockParseQuery.mockResolvedValue({ filters: { role: "x" }, rawQuery: "x" });
     mockSearchJobs.mockResolvedValue(fixtures);
+    mockSearchJobsWithReport.mockResolvedValue({ results: fixtures, quality: EMPTY_QUALITY });
     mockRerankWithMetrics.mockResolvedValue({ items: rerankFixture, tokens: 0 });
     mockCacheSearch.mockResolvedValue("c-1");
   });

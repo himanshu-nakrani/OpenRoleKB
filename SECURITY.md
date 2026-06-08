@@ -31,7 +31,7 @@ Include:
 
 ## Out of scope
 
-- Vulnerabilities in third-party SDKs (Exa, OpenAI/DeepSeek, Prisma, Next.js, etc.) — report those upstream. Tell us if a workaround in our code would help.
+- Vulnerabilities in third-party SDKs (Exa, OpenAI SDK, Google Gemini, Prisma, Next.js, etc.) — report those upstream. Tell us if a workaround in our code would help.
 - Self-hosted deployments using non-default configurations, modified code, or unsupported infrastructure.
 - Vulnerabilities that require a malicious browser extension, compromised device, or social engineering.
 - Findings from automated scanners without proof of real-world impact.

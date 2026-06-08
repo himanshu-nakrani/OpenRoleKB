@@ -17,7 +17,7 @@ Honest state of the product as of today, separating "works for users"
 from "scaffolded but not user-visible" from "still broken":
 
 ### Works end-to-end ✅
-- Natural-language search → Exa neural retrieval → DeepSeek rerank → SSE-streamed UI
+- Natural-language search → Exa neural retrieval → Gemini rerank → SSE-streamed UI
 - Two-pane results layout with independent scroll, keyboard nav, dark/light theming
 - Editorial landing page with demo loop on empty state
 - Anonymous-first identity + magic-link sign-in + cross-device transfer codes
@@ -261,7 +261,7 @@ tokens.
 
 **Definition of done:** removing the "remote" chip from a result
 re-runs the search and shows non-remote results, without re-parsing
-through DeepSeek (verify in EventLog: `parseMs: 0` on the chip-driven
+through Gemini (verify in EventLog: `parseMs: 0` on the chip-driven
 re-run).
 
 ---

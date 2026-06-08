@@ -51,12 +51,16 @@ describe("POST /api/search Contract Test", () => {
     vi.resetModules();
     const mockParseQuery = vi.fn().mockResolvedValue({ filters: { role: "react" }, rawQuery: "react developer" });
     const mockSearchJobs = vi.fn().mockResolvedValue(fixtures);
+    const mockSearchJobsWithReport = vi.fn().mockResolvedValue({
+      results: fixtures,
+      quality: { kept: fixtures.length, denylist_path: 0, ats_url_not_individual_job: 0, no_signals: 0 },
+    });
     const mockRerankWithMetrics = vi.fn().mockResolvedValue({ items: rerankFixture, tokens: 100 });
     const mockRateLimit = vi.fn().mockResolvedValue({ ok: true });
     const mockGetOwnerKey = vi.fn().mockResolvedValue("test-owner-key");
 
     vi.doMock("@/lib/parse-query", () => ({ parseQuery: mockParseQuery, sanitizeFilters: (f: unknown) => f }));
-    vi.doMock("@/lib/exa", () => ({ searchJobs: mockSearchJobs }));
+    vi.doMock("@/lib/exa", () => ({ searchJobs: mockSearchJobs, searchJobsWithReport: mockSearchJobsWithReport }));
     vi.doMock("@/lib/rerank", () => ({ rerankWithMetrics: mockRerankWithMetrics }));
     vi.doMock("@/lib/rate-limit", () => ({ rateLimit: mockRateLimit }));
     vi.doMock("@/lib/owner", () => ({ getOwnerKey: mockGetOwnerKey, normalizeOwnerKey: vi.fn().mockReturnValue("test-owner-key") }));

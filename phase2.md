@@ -39,7 +39,7 @@ them, every later feature builds on a slightly broken foundation.
 this quarter would have been caught by this test.
 
 - [ ] Add `vitest-postgres` or `testcontainers` to dev deps.
-- [ ] One test that boots Postgres, runs migrations, mocks Exa + DeepSeek,
+- [ ] One test that boots Postgres, runs migrations, mocks Exa + Gemini,
       hits `/api/search` once with a fresh query (asserts cache miss + write),
       then again (asserts cache hit + same `EventLog` shape).
 - [ ] Wire it as a separate CI job (slower than unit tests; gates merges to
@@ -325,7 +325,7 @@ understand.
 ### P4.1 Cost model spreadsheet
 **Effort:** 0.5 day · **Risk:** low — but blocks everything below.
 
-Input columns: searches/user/month, Exa $/req, DeepSeek tokens × rate.
+Input columns: searches/user/month, Exa $/req, Gemini tokens × rate.
 Outputs: cost per user per month at 10/30/100 searches/month.
 
 Use the real numbers now sitting in `EventLog.exaCostUsd` +
@@ -480,7 +480,7 @@ Naming so they don't sneak into scope:
 - **Self-hosted enterprise.** Open-source license + the Docker
   Compose people will figure it out without us building a control
   plane.
-- **Multi-LLM provider switching.** DeepSeek works. Switching when
+- **Multi-LLM provider switching.** Gemini works. Switching when
   we have a real reason, not before.
 
 ---
