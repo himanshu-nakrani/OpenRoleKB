@@ -15,6 +15,15 @@ export const MIN_RERANK_SCORE = 0.4;
 // Exa neural search result count per query (drives cost + downstream rerank payload).
 export const EXA_NUM_RESULTS = 50;
 
+// Layer A (local Postgres FTS over ingested ATS corpus) returns this many results
+// max per query before reranking. Matches EXA_NUM_RESULTS so token budgets are
+// comparable across paths.
+export const LOCAL_SEARCH_MAX_RESULTS = 50;
+
+// If Layer A returns fewer than this many candidates (after post-filtering),
+// fire Exa as a fallback / discovery pass and merge.
+export const LAYER_A_FALLBACK_THRESHOLD = 5;
+
 // Hard limits
 export const MAX_QUERY_LENGTH = 1000;
 

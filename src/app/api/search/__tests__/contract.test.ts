@@ -61,6 +61,9 @@ describe("POST /api/search Contract Test", () => {
 
     vi.doMock("@/lib/parse-query", () => ({ parseQuery: mockParseQuery, sanitizeFilters: (f: unknown) => f }));
     vi.doMock("@/lib/exa", () => ({ searchJobs: mockSearchJobs, searchJobsWithReport: mockSearchJobsWithReport }));
+    vi.doMock("@/lib/local-search", () => ({
+      searchLocalJobs: vi.fn().mockResolvedValue({ results: [], rawHits: 0, tsquery: null }),
+    }));
     vi.doMock("@/lib/rerank", () => ({ rerankWithMetrics: mockRerankWithMetrics }));
     vi.doMock("@/lib/rate-limit", () => ({ rateLimit: mockRateLimit }));
     vi.doMock("@/lib/owner", () => ({ getOwnerKey: mockGetOwnerKey, normalizeOwnerKey: vi.fn().mockReturnValue("test-owner-key") }));
