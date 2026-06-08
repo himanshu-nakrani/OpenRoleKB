@@ -55,7 +55,7 @@
     "eslint": "^10",
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",
-    "testcontainers": "^10.28.0",
+    "testcontainers": "^12.0.1",
     "tsx": "^4.22.4",
     "typescript": "^6",
     "vitest": "^4.1.8"
