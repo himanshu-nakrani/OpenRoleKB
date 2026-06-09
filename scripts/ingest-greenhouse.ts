@@ -44,6 +44,16 @@ const DEFAULT_SLUGS = [
   "mongodb",
   "intercom",
   "twilio",
+  // India batch — 9 verified slugs probed 2026-06-07 (~602 jobs total)
+  "phonepe",
+  "postman",
+  "groww",
+  "druva",
+  "highradius",
+  "slice",
+  "karbon",
+  "fivetran",
+  "tcs",
 ];
 
 const args = process.argv.slice(2);
