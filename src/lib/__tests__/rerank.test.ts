@@ -5,6 +5,8 @@ vi.mock("@/lib/llm", () => ({
   getLLM: () => ({
     chat: { completions: { create: mockCreate } },
   }),
+  getLLMModel: () => "gemini-flash-latest",
+  getLLMReasoningEffort: () => "none",
 }));
 
 const { rerankWithMetrics, rerank } = await import("@/lib/rerank");

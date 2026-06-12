@@ -1,5 +1,4 @@
-import { getLLM } from "@/lib/llm";
-import { LLM_MODEL } from "@/lib/config";
+import { getLLM, getLLMModel, getLLMReasoningEffort } from "@/lib/llm";
 import type { Filters } from "@/types/job";
 import type OpenAI from "openai";
 
@@ -73,10 +72,10 @@ export async function parseQuery(
 
     const response = await llm.chat.completions.create(
       {
-        model: LLM_MODEL,
+        model: getLLMModel(),
         max_tokens: 500,
         temperature: 0,
-        reasoning_effort: "none",
+        reasoning_effort: getLLMReasoningEffort(),
         messages: [
           {
             role: "system",

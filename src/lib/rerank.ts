@@ -1,5 +1,4 @@
-import { getLLM } from "@/lib/llm";
-import { LLM_MODEL } from "@/lib/config";
+import { getLLM, getLLMModel, getLLMReasoningEffort } from "@/lib/llm";
 import type { ExaResult, RerankItem } from "@/types/job";
 import type OpenAI from "openai";
 import { RERANK_TEXT_CHARS } from "@/lib/config";
@@ -72,10 +71,10 @@ export async function rerankWithMetrics(
 
   const response = await llm.chat.completions.create(
     {
-      model: LLM_MODEL,
+      model: getLLMModel(),
       max_tokens: 2000,
       temperature: 0,
-      reasoning_effort: "none",
+      reasoning_effort: getLLMReasoningEffort(),
       messages: [
         { role: "system", content: RERANK_RUBRIC },
         { role: "user", content: `User query: "${rawQuery}"\n\nRate these job postings:\n\n${resultsList}` },

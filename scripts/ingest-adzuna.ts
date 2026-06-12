@@ -169,7 +169,6 @@ async function fetchPage(
     app_id: appId,
     app_key: appKey,
     results_per_page: String(RESULTS_PER_PAGE),
-    page: String(page),
     "content-type": "application/json",
   });
   const url = `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?${params.toString()}`;
