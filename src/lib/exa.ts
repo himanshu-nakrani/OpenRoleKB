@@ -101,6 +101,7 @@ export async function searchJobsWithReport(
     highlights: r.highlights || [],
     publishedDate: r.publishedDate,
     author: r.author,
+    company: r.author,
   }));
 
   // Drop denylisted URLs (Ashby /blog/, /resources/, Workable /post-jobs-for-free/, etc.)

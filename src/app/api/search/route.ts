@@ -8,6 +8,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getOwnerKey } from "@/lib/owner";
 import { extractCompany } from "@/lib/company";
 import { extractSalary } from "@/lib/salary";
+import { extractLocation } from "@/lib/location";
 import { captureRouteError } from "@/lib/observe";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -23,6 +24,51 @@ import type { RerankItem, Filters, ExaResult } from "@/types/job";
 
 function sse(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+
+function stripUrlNoise(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString().replace(/\/$/, "").toLowerCase();
+  } catch {
+    return url.split(/[?#]/, 1)[0].replace(/\/$/, "").toLowerCase();
+  }
+}
+
+function normalizeContentPart(value: string | undefined): string {
+  return (value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function contentDedupKey(result: ExaResult): string {
+  const company = result.company ?? result.author ?? extractCompany(result.url) ?? "";
+  const location = result.location ?? (result.text ? extractLocation(result.text).location ?? "" : "");
+  return [
+    normalizeContentPart(company),
+    normalizeContentPart(result.title),
+    normalizeContentPart(location),
+  ].join("|");
+}
+
+export function dedupeSearchResults(results: ExaResult[]): ExaResult[] {
+  const seenUrls = new Set<string>();
+  const seenContent = new Set<string>();
+  const deduped: ExaResult[] = [];
+
+  for (const result of results) {
+    const urlKey = stripUrlNoise(result.url);
+    const contentKey = contentDedupKey(result);
+    if (seenUrls.has(urlKey) || (contentKey !== "||" && seenContent.has(contentKey))) {
+      continue;
+    }
+    seenUrls.add(urlKey);
+    if (contentKey !== "||") seenContent.add(contentKey);
+    deduped.push(result);
+  }
+
+  return deduped;
 }
 
 async function applyHiddenCompanies(
@@ -171,7 +217,7 @@ export async function POST(request: NextRequest) {
           ms: localMs,
         });
 
-        const localResults = local.results;
+        const localResults = dedupeSearchResults(local.results);
         const willFallback = localResults.length < LAYER_A_FALLBACK_THRESHOLD;
 
         // Stream the local results immediately so the user sees something
@@ -247,14 +293,13 @@ export async function POST(request: NextRequest) {
             return { ...r, salaryMinUsd: sal.min, salaryMaxUsd: sal.max, salaryRaw: sal.raw };
           });
 
-          // Dedupe by URL — a local row always wins over an Exa row with
-          // the same URL because the local row has stable Job.id and
-          // cleaner structured fields.
-          const localUrls = new Set(localResults.map((r) => r.url));
-          const newExaResults = exaResults.filter((r) => !localUrls.has(r.url));
+          // Dedupe by normalized URL and content key. Locals are first, so
+          // Layer A wins over Layer B when both discover the same posting.
+          const mergedResults = dedupeSearchResults([...localResults, ...exaResults]);
+          const newExaResults = mergedResults.slice(localResults.length);
 
           if (newExaResults.length > 0) {
-            combinedResults = [...localResults, ...newExaResults];
+            combinedResults = mergedResults;
             send("results", combinedResults);
 
             // Rerank the combined set so idx values reference the combined

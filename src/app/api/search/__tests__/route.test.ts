@@ -35,7 +35,7 @@ vi.mock("@/lib/rate-limit", () => ({ rateLimit: mockRateLimit }));
 vi.mock("@/lib/owner", () => ({ getOwnerKey: vi.fn().mockResolvedValue(null), normalizeOwnerKey: vi.fn().mockReturnValue(null) }));
 
 // Import AFTER mocks are set up
-const { POST } = await import("@/app/api/search/route");
+const { POST, dedupeSearchResults } = await import("@/app/api/search/route");
 
 interface SSEEvent {
   event: string;
@@ -298,6 +298,18 @@ describe("POST /api/search", () => {
     expect(resultsEvents.length).toBe(1);
     expect(rerankEvents.length).toBe(1);
     expect(events.some((e) => e.event === "done")).toBe(true);
+  });
+
+
+  it("dedupes results by stripped URL and company-title-location content key", () => {
+    const deduped = dedupeSearchResults([
+      { id: "local", title: "Software Engineer", url: "https://jobs.lever.co/acme/123?src=foo#apply", text: "", highlights: [], company: "Acme", location: "Bengaluru" },
+      { id: "url-dupe", title: "Software Engineer", url: "https://jobs.lever.co/acme/123", text: "", highlights: [], company: "Acme", location: "Bengaluru" },
+      { id: "content-dupe", title: " software engineer ", url: "https://boards.greenhouse.io/acme/jobs/999", text: "", highlights: [], company: "ACME", location: "bengaluru" },
+      { id: "other-location", title: "Software Engineer", url: "https://boards.greenhouse.io/acme/jobs/888", text: "", highlights: [], company: "Acme", location: "Hyderabad" },
+    ]);
+
+    expect(deduped.map((r) => r.id)).toEqual(["local", "other-location"]);
   });
 
   it("emits two results+rerank passes when local is below threshold (local first, then merged with Exa)", async () => {
