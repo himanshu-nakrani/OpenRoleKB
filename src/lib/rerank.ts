@@ -44,6 +44,9 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionFunctionTool[] = [
 
 export type RerankResult = { items: RerankItem[]; tokens?: number };
 
+const RERANK_BATCH_SIZE = 15;
+const RERANK_FIT_CHARS = 80;
+
 export async function rerank(
   rawQuery: string,
   results: ExaResult[],
@@ -63,10 +66,43 @@ export async function rerankWithMetrics(
     return { items: [{ idx: 0, score: 1.0, fit: "Only result available" }] };
   }
 
+  const batches = Array.from(
+    { length: Math.ceil(results.length / RERANK_BATCH_SIZE) },
+    (_, batchIndex) => {
+      const start = batchIndex * RERANK_BATCH_SIZE;
+      return results.slice(start, start + RERANK_BATCH_SIZE).map((result, offset) => ({
+        result,
+        idx: start + offset,
+      }));
+    },
+  );
+
+  const scored = await Promise.all(
+    batches.map((batch) => scoreBatch(rawQuery, results.length, batch, signal)),
+  );
+
+  const tokens = scored.reduce<number | undefined>((sum, batch) => {
+    if (batch.tokens === undefined) return sum;
+    return (sum ?? 0) + batch.tokens;
+  }, undefined);
+
+  const items = scored
+    .flatMap((batch) => batch.items)
+    .sort((a, b) => b.score - a.score);
+
+  return { items, tokens };
+}
+
+async function scoreBatch(
+  rawQuery: string,
+  totalResults: number,
+  batch: Array<{ result: ExaResult; idx: number }>,
+  signal?: AbortSignal,
+): Promise<RerankResult> {
   const llm = getLLM();
 
-  const resultsList = results
-    .map((r, i) => `${i}. ${r.title}\n   URL: ${r.url}\n   ${r.text.substring(0, RERANK_TEXT_CHARS)}`)
+  const resultsList = batch
+    .map(({ result: r, idx }) => `${idx}. ${r.title}\n   URL: ${r.url}\n   ${r.text.substring(0, RERANK_TEXT_CHARS)}`)
     .join("\n\n");
 
   const response = await llm.chat.completions.create(
@@ -91,18 +127,18 @@ export async function rerankWithMetrics(
     const rated = JSON.parse(toolCall.function.arguments) as { results: RerankItem[] };
 
     const valid = rated.results
-      .filter((r) => Number.isInteger(r.idx) && r.idx >= 0 && r.idx < results.length)
+      .filter((r) => Number.isInteger(r.idx) && r.idx >= 0 && r.idx < totalResults)
       .map((r) => ({
         idx: r.idx,
         score: typeof r.score === "number" && r.score >= 0 && r.score <= 1 ? r.score : 0.5,
-        fit: typeof r.fit === "string" ? r.fit.slice(0, 120) : "",
+        fit: typeof r.fit === "string" ? r.fit.slice(0, RERANK_FIT_CHARS) : "",
       }));
 
-    return { items: valid.sort((a, b) => b.score - a.score), tokens };
+    return { items: valid, tokens };
   }
 
   return {
-    items: results.map((_, idx) => ({ idx, score: 0.5, fit: "Relevance not rated" })),
+    items: batch.map(({ idx }) => ({ idx, score: 0.5, fit: "Relevance not rated" })),
     tokens,
   };
 }
