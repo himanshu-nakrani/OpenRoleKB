@@ -5,6 +5,7 @@ export interface Filters {
   location?: string;
   remote?: boolean;
   salaryMin?: number;
+  yearsExperience?: number;
   exclude?: string[];
   freshnessDays?: number;
 }
