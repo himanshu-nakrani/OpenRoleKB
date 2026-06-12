@@ -19,12 +19,15 @@ import { resolve } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { parseQuery } from "@/lib/parse-query";
 import { searchJobs } from "@/lib/exa";
+import { searchLocalJobs } from "@/lib/local-search";
 import { rerankWithMetrics } from "@/lib/rerank";
+import { LAYER_A_FALLBACK_THRESHOLD, LOCAL_SEARCH_MAX_RESULTS } from "@/lib/config";
+import { dedupeSearchResults } from "@/app/api/search/route";
 import { prisma } from "@/lib/prisma";
 import { hasSnapshot, loadSnapshot, writeSnapshot } from "../test/eval/snapshot-cache";
 import { scoreCase } from "../test/eval/score";
 import type { GoldenCase, CaseResult, EvalReport } from "../test/eval/types";
-import type { ExaResult, RerankItem } from "@/types/job";
+import type { ExaResult, Filters, RerankItem } from "@/types/job";
 
 const args = process.argv.slice(2);
 const flag = (name: string) => args.includes(name);
@@ -40,15 +43,24 @@ const ONLY_CASE = argValue("--case");
 
 const GEMINI_USD_PER_1K_TOKENS = 0.0014;
 
-async function exaForCase(c: GoldenCase): Promise<ExaResult[]> {
+async function exaForCase(c: GoldenCase, filters: Filters): Promise<ExaResult[]> {
   if (DRY_RUN || (!REFRESH && hasSnapshot(c.query))) {
     return loadSnapshot(c.query);
   }
   console.error(`  [exa] fetching live for "${c.query}"`);
-  const parsed = await parseQuery(c.query);
-  const results = await searchJobs(c.query, parsed.filters);
+  const results = await searchJobs(c.query, filters);
   writeSnapshot(c.query, results);
   return results;
+}
+
+async function candidatesForCase(c: GoldenCase): Promise<ExaResult[]> {
+  const parsed = await parseQuery(c.query);
+  const local = await searchLocalJobs(parsed.filters, LOCAL_SEARCH_MAX_RESULTS);
+  const localResults = dedupeSearchResults(local.results);
+  if (localResults.length >= LAYER_A_FALLBACK_THRESHOLD) return localResults;
+
+  const exa = await exaForCase(c, parsed.filters);
+  return dedupeSearchResults([...localResults, ...exa]);
 }
 
 function syntheticRerank(exa: ExaResult[]): { items: RerankItem[]; tokens?: number } {
@@ -64,7 +76,7 @@ function syntheticRerank(exa: ExaResult[]): { items: RerankItem[]; tokens?: numb
 
 async function runCase(c: GoldenCase): Promise<CaseResult> {
   const t0 = Date.now();
-  const exa = await exaForCase(c);
+  const exa = await candidatesForCase(c);
   const r = DRY_RUN
     ? syntheticRerank(exa)
     : await rerankWithMetrics(c.query, exa);
