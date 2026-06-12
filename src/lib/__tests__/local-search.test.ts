@@ -82,6 +82,30 @@ describe("searchLocalJobs", () => {
     expect(out.results.map((r) => r.id)).toEqual(["j1", "j2"]);
   });
 
+
+  it("post-filters location using city synonyms and rejects empty locations", async () => {
+    mockQueryRaw.mockResolvedValue([
+      row({ id: "j1", location: "Bengaluru, Karnataka" }),
+      row({ id: "j2", location: "Bangalore, India" }),
+      row({ id: "j3", location: "BLR" }),
+      row({ id: "j4", location: "Hyderabad, India" }),
+      row({ id: "j5", location: null }),
+    ]);
+    const out = await searchLocalJobs({ role: "engineer", location: "Bengaluru" });
+    expect(out.results.map((r) => r.id)).toEqual(["j1", "j2", "j3"]);
+    expect(out.rawHits).toBe(5);
+  });
+
+  it("combines remote and location post-filters", async () => {
+    mockQueryRaw.mockResolvedValue([
+      row({ id: "j1", location: "Hyderabad", isRemote: true }),
+      row({ id: "j2", location: "Hyderabad", isRemote: false }),
+      row({ id: "j3", location: "Bengaluru", isRemote: true }),
+    ]);
+    const out = await searchLocalJobs({ role: "engineer", location: "Hyd", remote: true });
+    expect(out.results.map((r) => r.id)).toEqual(["j1"]);
+  });
+
   it("maps row fields to ExaResult shape", async () => {
     mockQueryRaw.mockResolvedValue([row()]);
     const out = await searchLocalJobs({ role: "engineer" });

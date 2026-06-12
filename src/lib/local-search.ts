@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { extractSalary } from "@/lib/salary";
+import { locationMatches } from "@/lib/city-synonyms";
 import type { Filters, ExaResult } from "@/types/job";
 
 // Postgres `tsquery` has fragile syntax — bare punctuation, leading operators,
@@ -110,7 +111,10 @@ export async function searchLocalJobs(
   // the regex in extractLocation only fires on certain phrasings.
   let filtered = rows;
   if (filters.remote === true) {
-    filtered = rows.filter((r) => r.isRemote !== false);
+    filtered = filtered.filter((r) => r.isRemote !== false);
+  }
+  if (filters.location) {
+    filtered = filtered.filter((r) => locationMatches(r.location, filters.location));
   }
 
   // Backfill salary on the small subset where ingest missed it but the
