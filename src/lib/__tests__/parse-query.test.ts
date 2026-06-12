@@ -164,6 +164,16 @@ describe("parseQuery fast-path", () => {
     });
   });
 
+  it("does not fast-path city-constrained queries", async () => {
+    await parseQuery("data engineer pune or mumbai");
+    expect(mockCreate).toHaveBeenCalledOnce();
+  });
+
+  it("degrades country-constrained remote queries", async () => {
+    const result = await parseQuery("remote react developer india");
+    expect(result.filters).toMatchObject({ role: "react developer", location: "india", remote: true });
+  });
+
   it("logs parse errors at warn level and returns degraded filters", async () => {
     mockCreate.mockRejectedValueOnce(new Error("Gemini timeout"));
     const result = await parseQuery("senior backend engineer in bangalore");

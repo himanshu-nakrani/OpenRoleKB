@@ -1,7 +1,7 @@
 import { getLLM, getLLMModel, getLLMReasoningEffort } from "@/lib/llm";
 import type { Filters } from "@/types/job";
 import type OpenAI from "openai";
-import { CITY_SYNONYMS, findCitiesInText, normalizeText } from "@/lib/city-synonyms";
+import { CITY_SYNONYMS, COUNTRY_ALIASES, findCitiesInText, normalizeText } from "@/lib/city-synonyms";
 import { log } from "@/lib/logger";
 
 const TOOLS: OpenAI.Chat.Completions.ChatCompletionFunctionTool[] = [
@@ -74,11 +74,13 @@ const FILLER_WORDS = new Set([
   "an",
   "to",
   "at",
+  "remote",
 ]);
 
 const CITY_WORDS = new Set(
   CITY_SYNONYMS.flatMap((entry) => entry.synonyms.flatMap((synonym) => normalizeText(synonym).split(/\s+/))),
 );
+const COUNTRY_WORDS = new Set(Object.keys(COUNTRY_ALIASES).flatMap((country) => country.split(/\s+/)));
 
 function degradedParse(rawQuery: string): Filters {
   const filters: Filters = {};
@@ -88,6 +90,13 @@ function degradedParse(rawQuery: string): Filters {
   const cities = findCitiesInText(rawQuery);
   if (cities.length) {
     filters.location = cities.map((city) => city.canonical).join(" or ");
+  } else {
+    const words = normalizeText(rawQuery).split(/\s+/);
+    const country = Object.keys(COUNTRY_ALIASES).find((alias) => {
+      const aliasWords = alias.split(/\s+/);
+      return aliasWords.every((word) => words.includes(word));
+    });
+    if (country) filters.location = country;
   }
 
   if (/\b(remote|remote-first|work from home|wfh)\b/i.test(rawQuery)) {
@@ -99,7 +108,8 @@ function degradedParse(rawQuery: string): Filters {
     .filter(Boolean)
     .filter((token) => !/^\d+$/.test(token))
     .filter((token) => !FILLER_WORDS.has(token))
-    .filter((token) => !CITY_WORDS.has(token));
+    .filter((token) => !CITY_WORDS.has(token))
+    .filter((token) => !COUNTRY_WORDS.has(token));
 
   const role = Array.from(new Set(tokens)).slice(0, 4).join(" ");
   if (role) filters.role = role;
@@ -116,7 +126,8 @@ export async function parseQuery(
   const trimmed = rawQuery.trim();
 
   const hasYearsExperience = /\b\d+\+?\s*(?:years?|yrs?)\b/i.test(trimmed);
-  if (hasYearsExperience && findCitiesInText(trimmed).length > 0) {
+  const hasCityFilter = findCitiesInText(trimmed).length > 0;
+  if (hasYearsExperience && hasCityFilter) {
     return { filters: degradedParse(trimmed), rawQuery, tokens: 0 };
   }
 
@@ -124,9 +135,9 @@ export async function parseQuery(
   // Saves LLM cost/tokens/latency for common cases like "react engineer" or saved searches
   // that already have rich filters stored (merged later in cron).
   const FILTER_TRIGGERS =
-    /\b(remote|senior|junior|staff|lead|manager|director|vp|c-suite|intern|mid|level|eu|us|nyc|sf|berlin|london|paris|tokyo|singapore|toronto|sydney|fintech|crypto|blockchain|no |exclude|avoid|this (week|month|year)|last (24h|week|month)|posted|salary|\$\d|k\+|remote-first|work from|based in)\b/i;
+    /\b(remote|senior|junior|staff|lead|manager|director|vp|c-suite|intern|mid|level|eu|us|uk|india|canada|australia|nyc|sf|berlin|london|paris|tokyo|singapore|toronto|sydney|fintech|crypto|blockchain|no |exclude|avoid|this (week|month|year)|last (24h|week|month)|posted|salary|\$\d|k\+|remote-first|work from|based in)\b/i;
 
-  if (trimmed.length > 0 && trimmed.length < 80 && !FILTER_TRIGGERS.test(trimmed) && trimmed.split(/\s+/).length <= 5 && !/\b[A-Z][a-z]{2,}\b/.test(trimmed)) {
+  if (trimmed.length > 0 && trimmed.length < 80 && !hasCityFilter && !FILTER_TRIGGERS.test(trimmed) && trimmed.split(/\s+/).length <= 5 && !/\b[A-Z][a-z]{2,}\b/.test(trimmed)) {
     return { filters: { role: trimmed }, rawQuery, tokens: 0 };
   }
 
