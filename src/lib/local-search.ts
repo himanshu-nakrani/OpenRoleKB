@@ -98,7 +98,7 @@ export async function searchLocalJobs(
   const tsquery = buildTsQuery(filters);
   if (!tsquery) return { results: [], rawHits: 0, tsquery: null };
 
-  const prefilterLimit = filters.location ? Math.max(limit * 5, 250) : limit;
+  const prefilterLimit = filters.location ? Math.max(limit * 40, 2000) : limit;
   const rows = await prisma.$queryRaw<LocalJobRow[]>`
     SELECT id, url, title, company, location, "isRemote", description,
            "publishedAt", "salaryMinUsd", "salaryMaxUsd", "salaryRaw",

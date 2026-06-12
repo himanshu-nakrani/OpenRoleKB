@@ -87,7 +87,7 @@ describe("searchLocalJobs", () => {
     mockQueryRaw.mockResolvedValue([]);
     await searchLocalJobs({ role: "engineer", location: "Bengaluru" }, 50);
     expect(String(mockQueryRaw.mock.calls[0][0])).toContain("LIMIT ");
-    expect(mockQueryRaw.mock.calls[0]).toContain(250);
+    expect(mockQueryRaw.mock.calls[0]).toContain(2000);
   });
 
   it("post-filters location using city synonyms and rejects empty locations", async () => {
