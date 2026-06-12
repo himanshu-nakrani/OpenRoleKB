@@ -15,7 +15,7 @@ const mockParseQuery = vi.fn();
 const mockSearchJobs = vi.fn();
 const mockSearchJobsWithReport = vi.fn();
 const mockSearchLocalJobs = vi.fn();
-const EMPTY_QUALITY = { kept: 0, denylist_path: 0, ats_url_not_individual_job: 0, no_signals: 0 };
+const EMPTY_QUALITY = { kept: 0, denylist_path: 0, denylist_title: 0, ats_url_not_individual_job: 0, no_signals: 0 };
 const EMPTY_LOCAL = { results: [], rawHits: 0, tsquery: null };
 const mockRerank = vi.fn();
 const mockRerankWithMetrics = vi.fn();
@@ -310,6 +310,17 @@ describe("POST /api/search", () => {
     ]);
 
     expect(deduped.map((r) => r.id)).toEqual(["local", "other-location"]);
+  });
+
+  it("dedupes locale-prefixed URLs against their canonical counterpart", () => {
+    // /de/about-us/x and /about-us/x should collapse to the same dedup key
+    const deduped = dedupeSearchResults([
+      { id: "canonical", title: "Some Page", url: "https://www.smartrecruiters.com/about-us/leadership/michal-nowak", text: "", highlights: [] },
+      { id: "locale-de", title: "Some Page", url: "https://www.smartrecruiters.com/de/about-us/leadership/michal-nowak", text: "", highlights: [] },
+      { id: "locale-en-us", title: "Some Page", url: "https://www.smartrecruiters.com/en-us/about-us/leadership/michal-nowak", text: "", highlights: [] },
+    ]);
+    // Only the first (canonical) should survive; the two locale-prefixed variants collapse.
+    expect(deduped.map((r) => r.id)).toEqual(["canonical"]);
   });
 
   it("emits two results+rerank passes when local is below threshold (local first, then merged with Exa)", async () => {

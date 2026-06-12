@@ -89,7 +89,7 @@ export async function searchJobsWithReport(
   const response = await exa.searchAndContents(queryStr, { ...params, signal } as any);
 
   if (!response.results?.length) {
-    return { results: [], quality: { kept: 0, denylist_path: 0, ats_url_not_individual_job: 0, no_signals: 0 } };
+    return { results: [], quality: { kept: 0, denylist_path: 0, denylist_title: 0, ats_url_not_individual_job: 0, no_signals: 0 } };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

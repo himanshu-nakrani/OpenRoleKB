@@ -12,6 +12,7 @@ import { extractLocation } from "@/lib/location";
 import { captureRouteError } from "@/lib/observe";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { stripLocalePrefix } from "@/lib/retrieval-quality";
 import {
   MAX_QUERY_LENGTH,
   MIN_RERANK_SCORE,
@@ -32,6 +33,9 @@ function stripUrlNoise(url: string): string {
     const parsed = new URL(url);
     parsed.search = "";
     parsed.hash = "";
+    // Normalize locale prefix so /de/about-us/x and /about-us/x collapse to
+    // the same dedup key. This catches ATS pages mirrored under locale subpaths.
+    parsed.pathname = stripLocalePrefix(parsed.pathname);
     return parsed.toString().replace(/\/$/, "").toLowerCase();
   } catch {
     return url.split(/[?#]/, 1)[0].replace(/\/$/, "").toLowerCase();
@@ -284,6 +288,7 @@ export async function POST(request: NextRequest) {
             route: "/api/search",
             kept: exaResp.quality.kept,
             rejected_denylist: exaResp.quality.denylist_path,
+            rejected_title: exaResp.quality.denylist_title,
             ats_listing_not_individual: exaResp.quality.ats_url_not_individual_job,
           });
 
