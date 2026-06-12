@@ -2,6 +2,7 @@ import Exa from "exa-js";
 import type { Filters, ExaResult } from "@/types/job";
 import { EXA_NUM_RESULTS } from "@/lib/config";
 import { filterResults, type FilterReport } from "@/lib/retrieval-quality";
+import { countryCodeForLocation } from "@/lib/city-synonyms";
 
 const ATS_DOMAINS = [
   "greenhouse.io",
@@ -29,6 +30,11 @@ function getExa(): Exa {
   return exaClient;
 }
 
+function getUserLocation(filters: Filters): string | undefined {
+  if (filters.remote === true && !filters.location) return undefined;
+  return countryCodeForLocation(filters.location) ?? "US";
+}
+
 function buildQueryString(filters: Filters): string {
   const parts: string[] = [];
 
@@ -50,6 +56,8 @@ function buildQueryString(filters: Filters): string {
   return q;
 }
 
+export const __test__ = { buildQueryString, getUserLocation };
+
 export async function searchJobsWithReport(
   query: string,
   filters: Filters,
@@ -66,8 +74,10 @@ export async function searchJobsWithReport(
       highlights: { numSentences: 3 },
     },
     includeDomains: ATS_DOMAINS,
-    userLocation: "US",
   };
+
+  const userLocation = getUserLocation(filters);
+  if (userLocation) params.userLocation = userLocation;
 
   if (filters.freshnessDays && filters.freshnessDays > 0) {
     const since = new Date();
