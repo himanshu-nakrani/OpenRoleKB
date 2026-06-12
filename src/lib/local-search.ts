@@ -98,6 +98,7 @@ export async function searchLocalJobs(
   const tsquery = buildTsQuery(filters);
   if (!tsquery) return { results: [], rawHits: 0, tsquery: null };
 
+  const prefilterLimit = filters.location ? Math.max(limit * 5, 250) : limit;
   const rows = await prisma.$queryRaw<LocalJobRow[]>`
     SELECT id, url, title, company, location, "isRemote", description,
            "publishedAt", "salaryMinUsd", "salaryMaxUsd", "salaryRaw",
@@ -106,7 +107,7 @@ export async function searchLocalJobs(
     FROM "Job"
     WHERE "search_doc" @@ to_tsquery('english', ${tsquery})
     ORDER BY rank DESC, "publishedAt" DESC NULLS LAST
-    LIMIT ${limit}
+    LIMIT ${prefilterLimit}
   `;
 
   // Post-filter remote when the user explicitly asked for it. Allow nulls
@@ -122,7 +123,7 @@ export async function searchLocalJobs(
 
   // Backfill salary on the small subset where ingest missed it but the
   // text contains it. Cheap because description is already in memory.
-  const adapted = filtered.map((r) => {
+  const adapted = filtered.slice(0, limit).map((r) => {
     const out = rowToExaResult(r);
     if (!out.salaryMinUsd && !out.salaryMaxUsd && !out.salaryRaw && out.text) {
       const sal = extractSalary(out.text);

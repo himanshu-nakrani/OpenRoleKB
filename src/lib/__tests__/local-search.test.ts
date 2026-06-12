@@ -83,6 +83,13 @@ describe("searchLocalJobs", () => {
   });
 
 
+  it("uses a wider prefilter limit for location-constrained queries", async () => {
+    mockQueryRaw.mockResolvedValue([]);
+    await searchLocalJobs({ role: "engineer", location: "Bengaluru" }, 50);
+    expect(String(mockQueryRaw.mock.calls[0][0])).toContain("LIMIT ");
+    expect(mockQueryRaw.mock.calls[0]).toContain(250);
+  });
+
   it("post-filters location using city synonyms and rejects empty locations", async () => {
     mockQueryRaw.mockResolvedValue([
       row({ id: "j1", location: "Bengaluru, Karnataka" }),
