@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { hashQuery } from "@/lib/hash";
+import { hashQuery, hashRawQuery } from "@/lib/hash";
 import { createHash } from "crypto";
 import { extractCompany } from "@/lib/company";
 import { extractLocation, normalizeLocation } from "@/lib/location";
@@ -95,6 +95,38 @@ export async function getCachedSearch(rawQuery: string, filters: Filters): Promi
   });
 
   if (!cached) return null;
+  return hydrateCacheRow(cached, queryHash);
+}
+
+/**
+ * Fast-path lookup keyed on the raw query alone — usable BEFORE parseQuery,
+ * so repeat searches skip the ~2s LLM parse entirely. Same-raw-query always
+ * produces the same filters (parse is deterministic at temperature 0), so the
+ * stored row's filters are authoritative for this rawQuery.
+ */
+export async function getCachedSearchByRawQuery(rawQuery: string): Promise<GetCachedSearchResult> {
+  const rawHash = hashRawQuery(rawQuery);
+
+  const l1Hit = getFromL1(`raw:${rawHash}`);
+  if (l1Hit) return l1Hit;
+
+  const cutoff = new Date(Date.now() - CACHE_TTL_HOURS * 60 * 60 * 1000);
+  const cached = await prisma.searchCache.findFirst({
+    where: {
+      rawQueryHash: rawHash,
+      createdAt: { gte: cutoff },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!cached) return null;
+  return hydrateCacheRow(cached, `raw:${rawHash}`);
+}
+
+async function hydrateCacheRow(
+  cached: NonNullable<Awaited<ReturnType<typeof prisma.searchCache.findFirst>>>,
+  l1Key: string,
+): Promise<GetCachedSearchResult> {
 
   const jobs = await prisma.job.findMany({
     where: { id: { in: cached.resultJobIds } },
@@ -112,7 +144,7 @@ export async function getCachedSearch(rawQuery: string, filters: Filters): Promi
     resultJobIds: ordered.map((j) => j.id),
   };
 
-  setL1(queryHash, result);
+  setL1(l1Key, result);
   return result;
 }
 
@@ -178,16 +210,19 @@ export async function cacheSearch(
       }),
     );
 
+    const rawQueryHash = hashRawQuery(rawQuery);
     const cache = await tx.searchCache.upsert({
       where: { queryHash },
       create: {
         queryHash,
+        rawQueryHash,
         rawQuery,
         filters: filters as Prisma.InputJsonValue,
         resultJobIds: jobIds,
         rerankScores: persistedRerankScores as Prisma.InputJsonValue,
       },
       update: {
+        rawQueryHash,
         rawQuery,
         filters: filters as Prisma.InputJsonValue,
         resultJobIds: jobIds,

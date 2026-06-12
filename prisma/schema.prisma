@@ -30,6 +30,9 @@ model Job {
 model SearchCache {
   id           String   @id @default(cuid())
   queryHash    String   @unique
+  // Hash of the normalized raw query alone (no filters), so cache lookups can
+  // run BEFORE the LLM parse on repeat queries. Nullable for pre-existing rows.
+  rawQueryHash String?
   rawQuery     String
   filters      Json
   resultJobIds String[]
@@ -37,6 +40,7 @@ model SearchCache {
   createdAt    DateTime @default(now())
 
   @@index([createdAt])
+  @@index([rawQueryHash])
 }
 
 model SavedSearch {

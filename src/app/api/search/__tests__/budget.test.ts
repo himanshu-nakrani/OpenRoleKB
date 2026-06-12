@@ -29,7 +29,7 @@ vi.mock("@/lib/exa", () => ({
 }));
 vi.mock("@/lib/local-search", () => ({ searchLocalJobs: mockSearchLocalJobs }));
 vi.mock("@/lib/rerank", () => ({ rerankWithMetrics: mockRerankWithMetrics }));
-vi.mock("@/lib/cache", () => ({ cacheSearch: mockCacheSearch, getCachedSearch: mockGetCachedSearch }));
+vi.mock("@/lib/cache", () => ({ cacheSearch: mockCacheSearch, getCachedSearch: mockGetCachedSearch, getCachedSearchByRawQuery: vi.fn().mockResolvedValue(null) }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: mockRateLimit }));
 vi.mock("@/lib/owner", () => ({
   getOwnerKey: vi.fn().mockResolvedValue(null),

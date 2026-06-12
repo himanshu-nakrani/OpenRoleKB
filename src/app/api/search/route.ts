@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { parseQuery, sanitizeFilters } from "@/lib/parse-query";
 import { searchJobsWithReport } from "@/lib/exa";
 import { searchLocalJobs } from "@/lib/local-search";
-import { getCachedSearch, cacheSearch } from "@/lib/cache";
+import { getCachedSearch, getCachedSearchByRawQuery, cacheSearch } from "@/lib/cache";
 import { rerankWithMetrics } from "@/lib/rerank";
 import { rateLimit } from "@/lib/rate-limit";
 import { getOwnerKey } from "@/lib/owner";
@@ -159,25 +159,44 @@ export async function POST(request: NextRequest) {
           ? prisma.hiddenCompany.findMany({ where: { ownerKey }, select: { company: true } }).catch(() => [])
           : Promise.resolve([]);
 
-        let filters: Filters;
-        if (filtersOverride) {
-          filters = sanitizeFilters(filtersOverride);
-          parseMs = 0;
-        } else {
-          const tParse = performance.now();
-          const parsed = await parseQuery(rawQuery, request.signal);
-          parseMs = Math.round(performance.now() - tParse);
-          filters = parsed.filters;
-          parseTokens = parsed.tokens;
-          if (parsed.parseError) {
-            captureRouteError(new Error(parsed.parseError), { route: "/api/search", ownerKey, phase: "parse" });
+        // Raw-query cache fast path: an exact repeat query can be served
+        // without waiting ~2s for the LLM parse. The stored row carries the
+        // filters from the original parse, which we replay as the parsed event.
+        let filters: Filters | null = null;
+        let cached: Awaited<ReturnType<typeof getCachedSearch>> = null;
+
+        if (!filtersOverride) {
+          const tRawCache = performance.now();
+          cached = await getCachedSearchByRawQuery(rawQuery);
+          cacheMs = Math.round(performance.now() - tRawCache);
+          if (cached) {
+            filters = sanitizeFilters(cached.cache.filters);
+            parseMs = 0;
+          }
+        }
+
+        if (!filters) {
+          if (filtersOverride) {
+            filters = sanitizeFilters(filtersOverride);
+            parseMs = 0;
+          } else {
+            const tParse = performance.now();
+            const parsed = await parseQuery(rawQuery, request.signal);
+            parseMs = Math.round(performance.now() - tParse);
+            filters = parsed.filters;
+            parseTokens = parsed.tokens;
+            if (parsed.parseError) {
+              captureRouteError(new Error(parsed.parseError), { route: "/api/search", ownerKey, phase: "parse" });
+            }
           }
         }
         send("parsed", filters);
 
-        const tCacheCheck = performance.now();
-        const cached = await getCachedSearch(rawQuery, filters);
-        cacheMs = Math.round(performance.now() - tCacheCheck);
+        if (!cached) {
+          const tCacheCheck = performance.now();
+          cached = await getCachedSearch(rawQuery, filters);
+          cacheMs += Math.round(performance.now() - tCacheCheck);
+        }
 
         if (cached && cached.jobs.length > 0) {
           cacheHit = true;
@@ -307,11 +326,13 @@ export async function POST(request: NextRequest) {
             combinedResults = mergedResults;
             send("results", combinedResults);
 
-            // Rerank the combined set so idx values reference the combined
-            // array. This is the second-pass that replaces the local-only
-            // rerank on the client.
-            const r2 = await rerankAndFilter(combinedResults);
-            combinedRerank = r2.reranked;
+            // Second pass scores ONLY the new Exa items — locals keep their
+            // first-pass scores (same query, same model: re-scoring them is
+            // pure latency). Exa idx values are offset into the merged array,
+            // where locals occupy [0, localResults.length).
+            const r2 = await rerankAndFilter(newExaResults);
+            const offsetExaRerank = r2.reranked.map((it) => ({ ...it, idx: it.idx + localResults.length }));
+            combinedRerank = [...combinedRerank, ...offsetExaRerank].sort((a, b) => b.score - a.score);
             combinedScores = { ...combinedScores, ...r2.scores };
             send("rerank", combinedRerank);
           }
