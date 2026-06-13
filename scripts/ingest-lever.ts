@@ -10,6 +10,7 @@
  *   npx tsx scripts/ingest-lever.ts                # ingest all default slugs
  *   npx tsx scripts/ingest-lever.ts --dry-run      # fetch + print, do NOT write
  *   npx tsx scripts/ingest-lever.ts --slugs a,b,c  # override slug list
+ *   npx tsx scripts/ingest-lever.ts --include-discovered # merge verified AtsTenant slugs
  *
  * Reference: https://hire.lever.co/developer/postings
  */
@@ -40,8 +41,9 @@ const argValue = (name: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const DRY_RUN = flag("--dry-run");
+const INCLUDE_DISCOVERED = flag("--include-discovered");
 const slugsArg = argValue("--slugs");
-const SLUGS = slugsArg ? slugsArg.split(",").map((s) => s.trim()) : DEFAULT_SLUGS;
+const BASE_SLUGS = slugsArg ? slugsArg.split(",").map((s) => s.trim()).filter(Boolean) : DEFAULT_SLUGS;
 
 interface LeverCategories {
   location?: string;
@@ -83,6 +85,18 @@ async function getPrisma(): Promise<PrismaClient> {
   }
   return prismaInstance;
 }
+
+async function loadSlugs(): Promise<string[]> {
+  if (!INCLUDE_DISCOVERED) return BASE_SLUGS;
+  const prisma = await getPrisma();
+  const discovered = await prisma.atsTenant.findMany({
+    where: { ats: "lever", status: "verified" },
+    select: { slug: true },
+    orderBy: [{ hasIndianJobs: "desc" }, { jobsLastSeen: "desc" }],
+  });
+  return Array.from(new Set([...BASE_SLUGS, ...discovered.map((row) => row.slug)]));
+}
+
 
 function stripHtml(html: string): string {
   return html
@@ -238,7 +252,8 @@ async function ingestSlug(slug: string): Promise<PerSlugStats> {
 }
 
 async function main() {
-  console.log(`Lever ingestion — ${SLUGS.length} slug(s), dry-run=${DRY_RUN}\n`);
+  const SLUGS = await loadSlugs();
+  console.log(`Lever ingestion — ${SLUGS.length} slug(s), dry-run=${DRY_RUN}, include-discovered=${INCLUDE_DISCOVERED}\n`);
   const t0 = Date.now();
   const allStats: PerSlugStats[] = [];
 

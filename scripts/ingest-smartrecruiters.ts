@@ -14,6 +14,7 @@
  *   npx tsx scripts/ingest-smartrecruiters.ts                # ingest all default slugs
  *   npx tsx scripts/ingest-smartrecruiters.ts --dry-run      # fetch + print, do NOT write
  *   npx tsx scripts/ingest-smartrecruiters.ts --slugs a,b,c  # override slug list
+ *   npx tsx scripts/ingest-smartrecruiters.ts --include-discovered # merge verified AtsTenant slugs
  *
  * Reference: https://dev.smartrecruiters.com/customer-api/live-docs/posting-api/
  */
@@ -48,8 +49,9 @@ const argValue = (name: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const DRY_RUN = flag("--dry-run");
+const INCLUDE_DISCOVERED = flag("--include-discovered");
 const slugsArg = argValue("--slugs");
-const SLUGS = slugsArg ? slugsArg.split(",").map((s) => s.trim()) : DEFAULT_SLUGS;
+const BASE_SLUGS = slugsArg ? slugsArg.split(",").map((s) => s.trim()).filter(Boolean) : DEFAULT_SLUGS;
 
 interface SRLocation {
   city?: string;
@@ -120,6 +122,18 @@ async function getPrisma(): Promise<PrismaClient> {
   }
   return prismaInstance;
 }
+
+async function loadSlugs(): Promise<string[]> {
+  if (!INCLUDE_DISCOVERED) return BASE_SLUGS;
+  const prisma = await getPrisma();
+  const discovered = await prisma.atsTenant.findMany({
+    where: { ats: "smartrecruiters", status: "verified" },
+    select: { slug: true },
+    orderBy: [{ hasIndianJobs: "desc" }, { jobsLastSeen: "desc" }],
+  });
+  return Array.from(new Set([...BASE_SLUGS, ...discovered.map((row) => row.slug)]));
+}
+
 
 function stripHtml(html: string): string {
   return html
@@ -293,7 +307,8 @@ async function ingestSlug(slug: string): Promise<PerSlugStats> {
 }
 
 async function main() {
-  console.log(`SmartRecruiters ingestion — ${SLUGS.length} slug(s), dry-run=${DRY_RUN}\n`);
+  const SLUGS = await loadSlugs();
+  console.log(`SmartRecruiters ingestion — ${SLUGS.length} slug(s), dry-run=${DRY_RUN}, include-discovered=${INCLUDE_DISCOVERED}\n`);
   console.log(
     `  Note: detail fetch capped at ${MAX_DETAIL_PER_SLUG}/slug for polite operation. Prod ingest can lift this.\n`,
   );

@@ -10,6 +10,7 @@
  *   npx tsx scripts/ingest-greenhouse.ts                # ingest all default slugs
  *   npx tsx scripts/ingest-greenhouse.ts --dry-run      # fetch + print, do NOT write
  *   npx tsx scripts/ingest-greenhouse.ts --slugs a,b,c  # override slug list
+ *   npx tsx scripts/ingest-greenhouse.ts --include-discovered # merge verified AtsTenant slugs
  *
  * Reference: https://developers.greenhouse.io/job-board.html
  */
@@ -63,8 +64,9 @@ const argValue = (name: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const DRY_RUN = flag("--dry-run");
+const INCLUDE_DISCOVERED = flag("--include-discovered");
 const slugsArg = argValue("--slugs");
-const SLUGS = slugsArg ? slugsArg.split(",").map((s) => s.trim()) : DEFAULT_SLUGS;
+const BASE_SLUGS = slugsArg ? slugsArg.split(",").map((s) => s.trim()).filter(Boolean) : DEFAULT_SLUGS;
 
 interface GhJob {
   id: number;
@@ -107,6 +109,18 @@ async function getPrisma(): Promise<PrismaClient> {
   }
   return prismaInstance;
 }
+
+async function loadSlugs(): Promise<string[]> {
+  if (!INCLUDE_DISCOVERED) return BASE_SLUGS;
+  const prisma = await getPrisma();
+  const discovered = await prisma.atsTenant.findMany({
+    where: { ats: "greenhouse", status: "verified" },
+    select: { slug: true },
+    orderBy: [{ hasIndianJobs: "desc" }, { jobsLastSeen: "desc" }],
+  });
+  return Array.from(new Set([...BASE_SLUGS, ...discovered.map((row) => row.slug)]));
+}
+
 
 function stripHtml(html: string): string {
   // Cheap text extraction. Greenhouse `content` is HTML-escaped HTML;
@@ -237,7 +251,8 @@ async function ingestSlug(slug: string): Promise<PerSlugStats> {
 }
 
 async function main() {
-  console.log(`Greenhouse ingestion POC — ${SLUGS.length} slug(s), dry-run=${DRY_RUN}\n`);
+  const SLUGS = await loadSlugs();
+  console.log(`Greenhouse ingestion POC — ${SLUGS.length} slug(s), dry-run=${DRY_RUN}, include-discovered=${INCLUDE_DISCOVERED}\n`);
   const t0 = Date.now();
   const allStats: PerSlugStats[] = [];
 
