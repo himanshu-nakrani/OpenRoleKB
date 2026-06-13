@@ -12,6 +12,11 @@ Score 0.0 to 1.0:
 - 0.4-0.5: Partial match — tangentially related
 - 0.0-0.3: Poor match — wrong role or explicitly excluded
 
+SENIORITY IS A HARD CONSTRAINT, NOT A PREFERENCE:
+- If the user asked for "junior" / "entry-level" / "associate" / "new grad" / "graduate", a posting titled Senior / Staff / Lead / Principal / Director / VP scores AT MOST 0.3 — it is the wrong role, not a partial match.
+- Symmetric for "senior" / "staff" queries: a junior or associate posting scores AT MOST 0.3.
+- "Mid-level" is the flexible band — neither junior nor senior titles qualify as a strong match.
+
 For each result, provide a one-line explanation (max 80 chars). Return all results ordered by score descending.`;
 
 const TOOLS: OpenAI.Chat.Completions.ChatCompletionFunctionTool[] = [

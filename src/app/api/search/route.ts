@@ -75,6 +75,41 @@ export function dedupeSearchResults(results: ExaResult[]): ExaResult[] {
   return deduped;
 }
 
+// Title tokens that contradict a stated seniority. The rerank rubric already
+// instructs Gemini to floor these at 0.3, but the rubric isn't always honored —
+// this is a deterministic backstop. Tokens match against a normalized title
+// (punctuation stripped, single-spaced, padded with leading/trailing spaces).
+const SENIOR_TITLE_TOKENS = ["principal", "staff", "lead", "director", "vp ", "vice president", "head of", "senior", " sr "];
+const JUNIOR_TITLE_TOKENS = ["junior", "associate", "intern", "entry level", "new grad", "graduate", " i ", " 1 "];
+
+function normalizeTitleForMatch(title: string): string {
+  return ` ${title.toLowerCase().replace(/[.,/()&;:!?'"]/g, " ").replace(/\s+/g, " ").trim()} `;
+}
+
+export function titleContradictsSeniority(title: string, want: string): boolean {
+  const t = normalizeTitleForMatch(title);
+  const w = want.toLowerCase().trim();
+  if (w === "junior" || w === "intern" || w === "entry" || w === "entry-level" || w === "associate") {
+    return SENIOR_TITLE_TOKENS.some((tok) => t.includes(tok));
+  }
+  if (w === "senior" || w === "staff" || w === "principal" || w === "lead" || w === "director" || w === "vp" || w === "c-suite") {
+    return JUNIOR_TITLE_TOKENS.some((tok) => t.includes(tok));
+  }
+  return false;
+}
+
+function applySeniorityFilter(
+  reranked: RerankItem[],
+  results: Array<{ title?: string }>,
+  filters: Filters,
+): RerankItem[] {
+  if (!filters.seniority) return reranked;
+  return reranked.filter((r) => {
+    const title = results[r.idx]?.title ?? "";
+    return !titleContradictsSeniority(title, filters.seniority!);
+  });
+}
+
 async function applyHiddenCompanies(
   ownerKey: string | null,
   reranked: RerankItem[],
@@ -213,6 +248,7 @@ export async function POST(request: NextRequest) {
 
           const hiddenForCache = await hiddenPromise;
           reranked = await applyHiddenCompanies(ownerKey, reranked, cached.jobs, hiddenForCache);
+          reranked = applySeniorityFilter(reranked, cached.jobs, filters);
 
           resultCount = reranked.length;
           send("rerank", reranked);
@@ -270,6 +306,7 @@ export async function POST(request: NextRequest) {
             items = items.filter((it) => it.score >= MIN_RERANK_SCORE);
             const hidden = await hiddenPromise;
             items = await applyHiddenCompanies(ownerKey, items, candidates, hidden);
+            items = applySeniorityFilter(items, candidates, filters!);
             return { reranked: items, scores };
           } catch (err) {
             rerankFailed = true;
