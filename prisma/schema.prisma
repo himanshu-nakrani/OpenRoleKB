@@ -211,3 +211,21 @@ model EventLog {
 
   @@index([evt, createdAt])
 }
+model AtsTenant {
+  id            String    @id @default(cuid())
+  ats           String
+  slug          String
+  companyName   String?
+  discoveredAt  DateTime  @default(now())
+  verifiedAt    DateTime?
+  lastFetchAt   DateTime?
+  status        String    @default("candidate")
+  jobsLastSeen  Int?
+  hasIndianJobs Boolean?
+  source        String
+  notes         String?
+
+  @@unique([ats, slug])
+  @@index([status, hasIndianJobs])
+}
+

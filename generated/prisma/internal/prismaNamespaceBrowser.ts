@@ -64,7 +64,8 @@ export const ModelName = {
   VerificationToken: 'VerificationToken',
   TransferCode: 'TransferCode',
   EvalRun: 'EvalRun',
-  EventLog: 'EventLog'
+  EventLog: 'EventLog',
+  AtsTenant: 'AtsTenant'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -108,6 +109,7 @@ export type JobScalarFieldEnum = (typeof JobScalarFieldEnum)[keyof typeof JobSca
 export const SearchCacheScalarFieldEnum = {
   id: 'id',
   queryHash: 'queryHash',
+  rawQueryHash: 'rawQueryHash',
   rawQuery: 'rawQuery',
   filters: 'filters',
   resultJobIds: 'resultJobIds',
@@ -283,6 +285,24 @@ export const EventLogScalarFieldEnum = {
 } as const
 
 export type EventLogScalarFieldEnum = (typeof EventLogScalarFieldEnum)[keyof typeof EventLogScalarFieldEnum]
+
+
+export const AtsTenantScalarFieldEnum = {
+  id: 'id',
+  ats: 'ats',
+  slug: 'slug',
+  companyName: 'companyName',
+  discoveredAt: 'discoveredAt',
+  verifiedAt: 'verifiedAt',
+  lastFetchAt: 'lastFetchAt',
+  status: 'status',
+  jobsLastSeen: 'jobsLastSeen',
+  hasIndianJobs: 'hasIndianJobs',
+  source: 'source',
+  notes: 'notes'
+} as const
+
+export type AtsTenantScalarFieldEnum = (typeof AtsTenantScalarFieldEnum)[keyof typeof AtsTenantScalarFieldEnum]
 
 
 export const SortOrder = {
