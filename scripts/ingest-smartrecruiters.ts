@@ -20,6 +20,7 @@
  */
 import { createHash } from "node:crypto";
 import { normalizeLocation } from "@/lib/location";
+import { isDenylistedTenant } from "@/lib/ats-tenant-denylist";
 import { extractSalary } from "@/lib/salary";
 import type { PrismaClient } from "../generated/prisma/client";
 
@@ -124,14 +125,15 @@ async function getPrisma(): Promise<PrismaClient> {
 }
 
 async function loadSlugs(): Promise<string[]> {
-  if (!INCLUDE_DISCOVERED) return BASE_SLUGS;
+  if (!INCLUDE_DISCOVERED) return BASE_SLUGS.filter((s) => !isDenylistedTenant("smartrecruiters", s));
   const prisma = await getPrisma();
   const discovered = await prisma.atsTenant.findMany({
     where: { ats: "smartrecruiters", status: "verified" },
     select: { slug: true },
     orderBy: [{ hasIndianJobs: "desc" }, { jobsLastSeen: "desc" }],
   });
-  return Array.from(new Set([...BASE_SLUGS, ...discovered.map((row) => row.slug)]));
+  const merged = Array.from(new Set([...BASE_SLUGS, ...discovered.map((row) => row.slug)]));
+  return merged.filter((s) => !isDenylistedTenant("smartrecruiters", s));
 }
 
 

@@ -1,4 +1,5 @@
 import { CITY_SYNONYMS, COUNTRY_ALIASES, normalizeText } from "@/lib/city-synonyms";
+import { isDenylistedTenant } from "@/lib/ats-tenant-denylist";
 import type { Ats } from "@/lib/ats-discovery";
 
 export interface VerificationResult {
@@ -88,6 +89,9 @@ function normalizeJobs(ats: Ats, data: unknown): { jobs: NormalizedJob[]; compan
 }
 
 export async function verifyTenant(ats: Ats, slug: string, options: VerifyOptions = {}): Promise<VerificationResult> {
+  if (isDenylistedTenant(ats, slug)) {
+    return { ok: false, jobCount: 0, sampleTitles: [], hasIndianJobs: false, status: "dead", error: "denylisted: vendor demo / non-customer tenant" };
+  }
   const fetchImpl = options.fetchImpl ?? fetch;
   const now = options.now ?? Date.now;
   const url = endpointFor(ats, slug);
