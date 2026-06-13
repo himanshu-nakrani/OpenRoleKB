@@ -13,7 +13,9 @@ const rerankFixture = JSON.parse(
 const mockParseQuery = vi.fn();
 const mockSearchJobs = vi.fn();
 const mockSearchJobsWithReport = vi.fn();
+const mockSearchLocalJobs = vi.fn();
 const EMPTY_QUALITY = { kept: 0, denylist_path: 0, ats_url_not_individual_job: 0, no_signals: 0 };
+const EMPTY_LOCAL = { results: [], rawHits: 0, tsquery: null };
 const mockRerankWithMetrics = vi.fn();
 const mockCacheSearch = vi.fn();
 const mockGetCachedSearch = vi.fn();
@@ -25,8 +27,9 @@ vi.mock("@/lib/exa", () => ({
   searchJobs: mockSearchJobs,
   searchJobsWithReport: mockSearchJobsWithReport,
 }));
+vi.mock("@/lib/local-search", () => ({ searchLocalJobs: mockSearchLocalJobs }));
 vi.mock("@/lib/rerank", () => ({ rerankWithMetrics: mockRerankWithMetrics }));
-vi.mock("@/lib/cache", () => ({ cacheSearch: mockCacheSearch, getCachedSearch: mockGetCachedSearch }));
+vi.mock("@/lib/cache", () => ({ cacheSearch: mockCacheSearch, getCachedSearch: mockGetCachedSearch, getCachedSearchByRawQuery: vi.fn().mockResolvedValue(null) }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: mockRateLimit }));
 vi.mock("@/lib/owner", () => ({
   getOwnerKey: vi.fn().mockResolvedValue(null),
@@ -79,6 +82,7 @@ describe("budget — cost + token tracking", () => {
     mockParseQuery.mockResolvedValue({ filters: { role: "x" }, rawQuery: "x", tokens: 180 });
     mockSearchJobs.mockResolvedValue(fixtures);
     mockSearchJobsWithReport.mockResolvedValue({ results: fixtures, quality: EMPTY_QUALITY });
+    mockSearchLocalJobs.mockResolvedValue(EMPTY_LOCAL);
     mockRerankWithMetrics.mockResolvedValue({ items: rerankFixture, tokens: 3200 });
     mockCacheSearch.mockResolvedValue("c-1");
   });
@@ -141,6 +145,7 @@ describe("budget — latency budgets (synthetic timing)", () => {
     mockParseQuery.mockResolvedValue({ filters: { role: "x" }, rawQuery: "x" });
     mockSearchJobs.mockResolvedValue(fixtures);
     mockSearchJobsWithReport.mockResolvedValue({ results: fixtures, quality: EMPTY_QUALITY });
+    mockSearchLocalJobs.mockResolvedValue(EMPTY_LOCAL);
     mockRerankWithMetrics.mockResolvedValue({ items: rerankFixture, tokens: 0 });
     mockCacheSearch.mockResolvedValue("c-1");
   });

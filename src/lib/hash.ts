@@ -25,3 +25,7 @@ export function hashQuery(rawQuery: string, filters: Filters): string {
   const payload = JSON.stringify({ q: normalized, f: canonicalize(filters) });
   return createHash("sha256").update(payload).digest("hex");
 }
+
+export function hashRawQuery(rawQuery: string): string {
+  return createHash("sha256").update(normalizeQuery(rawQuery)).digest("hex");
+}

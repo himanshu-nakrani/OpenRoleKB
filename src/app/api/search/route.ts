@@ -1,25 +1,78 @@
 import { NextRequest } from "next/server";
 import { parseQuery, sanitizeFilters } from "@/lib/parse-query";
 import { searchJobsWithReport } from "@/lib/exa";
-import { getCachedSearch, cacheSearch } from "@/lib/cache";
+import { searchLocalJobs } from "@/lib/local-search";
+import { getCachedSearch, getCachedSearchByRawQuery, cacheSearch } from "@/lib/cache";
 import { rerankWithMetrics } from "@/lib/rerank";
 import { rateLimit } from "@/lib/rate-limit";
 import { getOwnerKey } from "@/lib/owner";
 import { extractCompany } from "@/lib/company";
 import { extractSalary } from "@/lib/salary";
+import { extractLocation } from "@/lib/location";
 import { captureRouteError } from "@/lib/observe";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { stripLocalePrefix } from "@/lib/retrieval-quality";
 import {
   MAX_QUERY_LENGTH,
   MIN_RERANK_SCORE,
   EXA_USD_PER_REQUEST,
   GEMINI_USD_PER_1K_TOKENS,
+  LAYER_A_FALLBACK_THRESHOLD,
+  LOCAL_SEARCH_MAX_RESULTS,
 } from "@/lib/config";
-import type { RerankItem, Filters } from "@/types/job";
+import type { RerankItem, Filters, ExaResult } from "@/types/job";
 
 function sse(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+
+function stripUrlNoise(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.search = "";
+    parsed.hash = "";
+    // Normalize locale prefix so /de/about-us/x and /about-us/x collapse to
+    // the same dedup key. This catches ATS pages mirrored under locale subpaths.
+    parsed.pathname = stripLocalePrefix(parsed.pathname);
+    return parsed.toString().replace(/\/$/, "").toLowerCase();
+  } catch {
+    return url.split(/[?#]/, 1)[0].replace(/\/$/, "").toLowerCase();
+  }
+}
+
+function normalizeContentPart(value: string | undefined): string {
+  return (value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function contentDedupKey(result: ExaResult): string {
+  const company = result.company ?? result.author ?? extractCompany(result.url) ?? "";
+  const location = result.location ?? (result.text ? extractLocation(result.text).location ?? "" : "");
+  return [
+    normalizeContentPart(company),
+    normalizeContentPart(result.title),
+    normalizeContentPart(location),
+  ].join("|");
+}
+
+export function dedupeSearchResults(results: ExaResult[]): ExaResult[] {
+  const seenUrls = new Set<string>();
+  const seenContent = new Set<string>();
+  const deduped: ExaResult[] = [];
+
+  for (const result of results) {
+    const urlKey = stripUrlNoise(result.url);
+    const contentKey = contentDedupKey(result);
+    if (seenUrls.has(urlKey) || (contentKey !== "||" && seenContent.has(contentKey))) {
+      continue;
+    }
+    seenUrls.add(urlKey);
+    if (contentKey !== "||") seenContent.add(contentKey);
+    deduped.push(result);
+  }
+
+  return deduped;
 }
 
 async function applyHiddenCompanies(
@@ -106,25 +159,44 @@ export async function POST(request: NextRequest) {
           ? prisma.hiddenCompany.findMany({ where: { ownerKey }, select: { company: true } }).catch(() => [])
           : Promise.resolve([]);
 
-        let filters: Filters;
-        if (filtersOverride) {
-          filters = sanitizeFilters(filtersOverride);
-          parseMs = 0;
-        } else {
-          const tParse = performance.now();
-          const parsed = await parseQuery(rawQuery, request.signal);
-          parseMs = Math.round(performance.now() - tParse);
-          filters = parsed.filters;
-          parseTokens = parsed.tokens;
-          if (parsed.parseError) {
-            captureRouteError(new Error(parsed.parseError), { route: "/api/search", ownerKey, phase: "parse" });
+        // Raw-query cache fast path: an exact repeat query can be served
+        // without waiting ~2s for the LLM parse. The stored row carries the
+        // filters from the original parse, which we replay as the parsed event.
+        let filters: Filters | null = null;
+        let cached: Awaited<ReturnType<typeof getCachedSearch>> = null;
+
+        if (!filtersOverride) {
+          const tRawCache = performance.now();
+          cached = await getCachedSearchByRawQuery(rawQuery);
+          cacheMs = Math.round(performance.now() - tRawCache);
+          if (cached) {
+            filters = sanitizeFilters(cached.cache.filters);
+            parseMs = 0;
+          }
+        }
+
+        if (!filters) {
+          if (filtersOverride) {
+            filters = sanitizeFilters(filtersOverride);
+            parseMs = 0;
+          } else {
+            const tParse = performance.now();
+            const parsed = await parseQuery(rawQuery, request.signal);
+            parseMs = Math.round(performance.now() - tParse);
+            filters = parsed.filters;
+            parseTokens = parsed.tokens;
+            if (parsed.parseError) {
+              captureRouteError(new Error(parsed.parseError), { route: "/api/search", ownerKey, phase: "parse" });
+            }
           }
         }
         send("parsed", filters);
 
-        const tCacheCheck = performance.now();
-        const cached = await getCachedSearch(rawQuery, filters);
-        cacheMs = Math.round(performance.now() - tCacheCheck);
+        if (!cached) {
+          const tCacheCheck = performance.now();
+          cached = await getCachedSearch(rawQuery, filters);
+          cacheMs += Math.round(performance.now() - tCacheCheck);
+        }
 
         if (cached && cached.jobs.length > 0) {
           cacheHit = true;
@@ -155,58 +227,124 @@ export async function POST(request: NextRequest) {
           return;
         }
 
-        const tExa = performance.now();
-        const exaResp = await searchJobsWithReport(rawQuery, filters, request.signal);
-        let exaResults = exaResp.results;
-        exaMs = Math.round(performance.now() - tExa);
-        // Exa charges per 1k requests; 50 results in this app is a single request.
-        exaCostUsd = EXA_USD_PER_REQUEST;
+        // Layer A: query the local Job corpus (ATS-ingested rows) first.
+        const tLocal = performance.now();
+        const local = await searchLocalJobs(filters, LOCAL_SEARCH_MAX_RESULTS);
+        const localMs = Math.round(performance.now() - tLocal);
         log.info({
-          evt: "retrieval_quality",
+          evt: "local_search",
           route: "/api/search",
-          kept: exaResp.quality.kept,
-          rejected_denylist: exaResp.quality.denylist_path,
-          ats_listing_not_individual: exaResp.quality.ats_url_not_individual_job,
+          tsquery: local.tsquery,
+          raw_hits: local.rawHits,
+          kept: local.results.length,
+          ms: localMs,
         });
-        // Attach salary extraction for fresh results (P2)
-        exaResults = exaResults.map((r) => {
-          const sal = r.text ? extractSalary(r.text) : {};
-          return { ...r, salaryMinUsd: sal.min, salaryMaxUsd: sal.max, salaryRaw: sal.raw };
-        });
-        send("results", exaResults);
 
-        let reranked: RerankItem[] = [];
-        let rerankScores: Record<string, { score: number; fit: string }> = {};
-        try {
-          const tRerank = performance.now();
-          const r = await rerankWithMetrics(rawQuery, exaResults, request.signal);
-          rerankMs = Math.round(performance.now() - tRerank);
-          reranked = r.items;
-          rerankTokens = r.tokens;
-          rerankScores = Object.fromEntries(
-            reranked
-              .map((r) => [exaResults[r.idx]?.id, { score: r.score, fit: r.fit }] as const)
-              .filter(([id]) => typeof id === "string"),
-          );
-          reranked = reranked.filter((r) => r.score >= MIN_RERANK_SCORE);
-        } catch (err) {
-          rerankFailed = true;
-          captureRouteError(err, { route: "/api/search", ownerKey, phase: "rerank" });
-          reranked = exaResults.map((_, i) => ({ idx: i, score: 0.5, fit: "" }));
+        const localResults = dedupeSearchResults(local.results);
+        const willFallback = localResults.length < LAYER_A_FALLBACK_THRESHOLD;
+
+        // Stream the local results immediately so the user sees something
+        // in <200ms instead of waiting for Exa. The reranker pass below
+        // operates on the same array, then we emit the rerank event.
+        if (localResults.length > 0) {
+          send("results", localResults);
+        }
+
+        // Inner helper: rerank a candidate array, hide companies, and
+        // build the persisted score map. Mutates rerankMs/rerankTokens/
+        // rerankFailed in the enclosing scope.
+        async function rerankAndFilter(
+          candidates: ExaResult[],
+        ): Promise<{ reranked: RerankItem[]; scores: Record<string, { score: number; fit: string }> }> {
+          try {
+            const tRerank = performance.now();
+            const r = await rerankWithMetrics(rawQuery, candidates, request.signal);
+            rerankMs += Math.round(performance.now() - tRerank);
+            rerankTokens = (rerankTokens ?? 0) + (r.tokens ?? 0);
+            let items = r.items;
+            const scores = Object.fromEntries(
+              items
+                .map((it) => [candidates[it.idx]?.id, { score: it.score, fit: it.fit }] as const)
+                .filter(([id]) => typeof id === "string"),
+            );
+            items = items.filter((it) => it.score >= MIN_RERANK_SCORE);
+            const hidden = await hiddenPromise;
+            items = await applyHiddenCompanies(ownerKey, items, candidates, hidden);
+            return { reranked: items, scores };
+          } catch (err) {
+            rerankFailed = true;
+            captureRouteError(err, { route: "/api/search", ownerKey, phase: "rerank" });
+            const fallback = candidates.map((_, i) => ({ idx: i, score: 0.5, fit: "" }));
+            return { reranked: fallback, scores: {} };
+          }
+        }
+
+        // First-pass rerank: run on whatever local has. Skip entirely if
+        // we have nothing AND we know Exa is coming (avoids an LLM call
+        // on an empty array).
+        let combinedResults: ExaResult[] = localResults;
+        let combinedRerank: RerankItem[] = [];
+        let combinedScores: Record<string, { score: number; fit: string }> = {};
+
+        if (localResults.length > 0) {
+          const r1 = await rerankAndFilter(localResults);
+          combinedRerank = r1.reranked;
+          combinedScores = r1.scores;
+          send("rerank", combinedRerank);
+        }
+
+        // Layer B: if local is under the threshold, call Exa as a discovery
+        // / fallback pass. Merge with locals (dedupe by URL) and rerank
+        // the combined set so the client gets a single coherent ordering.
+        if (willFallback) {
+          const tExa = performance.now();
+          const exaResp = await searchJobsWithReport(rawQuery, filters, request.signal);
+          let exaResults = exaResp.results;
+          exaMs = Math.round(performance.now() - tExa);
+          exaCostUsd = EXA_USD_PER_REQUEST;
+          log.info({
+            evt: "retrieval_quality",
+            route: "/api/search",
+            kept: exaResp.quality.kept,
+            rejected_denylist: exaResp.quality.denylist_path,
+            rejected_title: exaResp.quality.denylist_title,
+            ats_listing_not_individual: exaResp.quality.ats_url_not_individual_job,
+          });
+
+          // Salary backfill for Exa results (P2; locals already have it from ingest)
+          exaResults = exaResults.map((r) => {
+            const sal = r.text ? extractSalary(r.text) : {};
+            return { ...r, salaryMinUsd: sal.min, salaryMaxUsd: sal.max, salaryRaw: sal.raw };
+          });
+
+          // Dedupe by normalized URL and content key. Locals are first, so
+          // Layer A wins over Layer B when both discover the same posting.
+          const mergedResults = dedupeSearchResults([...localResults, ...exaResults]);
+          const newExaResults = mergedResults.slice(localResults.length);
+
+          if (newExaResults.length > 0) {
+            combinedResults = mergedResults;
+            send("results", combinedResults);
+
+            // Second pass scores ONLY the new Exa items — locals keep their
+            // first-pass scores (same query, same model: re-scoring them is
+            // pure latency). Exa idx values are offset into the merged array,
+            // where locals occupy [0, localResults.length).
+            const r2 = await rerankAndFilter(newExaResults);
+            const offsetExaRerank = r2.reranked.map((it) => ({ ...it, idx: it.idx + localResults.length }));
+            combinedRerank = [...combinedRerank, ...offsetExaRerank].sort((a, b) => b.score - a.score);
+            combinedScores = { ...combinedScores, ...r2.scores };
+            send("rerank", combinedRerank);
+          }
         }
 
         llmCostUsd = estimateLlmCostUsd(parseTokens, rerankTokens);
-
-        const hiddenForExa = await hiddenPromise;
-        reranked = await applyHiddenCompanies(ownerKey, reranked, exaResults, hiddenForExa);
-
-        resultCount = reranked.length;
-        send("rerank", reranked);
+        resultCount = combinedRerank.length;
 
         let cacheId: string | null = null;
         if (!rerankFailed) {
           try {
-            cacheId = await cacheSearch(rawQuery, filters, exaResults, rerankScores);
+            cacheId = await cacheSearch(rawQuery, filters, combinedResults, combinedScores);
           } catch (err) {
             captureRouteError(err, { route: "/api/search", ownerKey, phase: "cache" });
           }

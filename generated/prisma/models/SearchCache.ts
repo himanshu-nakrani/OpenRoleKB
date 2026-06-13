@@ -27,6 +27,7 @@ export type AggregateSearchCache = {
 export type SearchCacheMinAggregateOutputType = {
   id: string | null
   queryHash: string | null
+  rawQueryHash: string | null
   rawQuery: string | null
   createdAt: Date | null
 }
@@ -34,6 +35,7 @@ export type SearchCacheMinAggregateOutputType = {
 export type SearchCacheMaxAggregateOutputType = {
   id: string | null
   queryHash: string | null
+  rawQueryHash: string | null
   rawQuery: string | null
   createdAt: Date | null
 }
@@ -41,6 +43,7 @@ export type SearchCacheMaxAggregateOutputType = {
 export type SearchCacheCountAggregateOutputType = {
   id: number
   queryHash: number
+  rawQueryHash: number
   rawQuery: number
   filters: number
   resultJobIds: number
@@ -53,6 +56,7 @@ export type SearchCacheCountAggregateOutputType = {
 export type SearchCacheMinAggregateInputType = {
   id?: true
   queryHash?: true
+  rawQueryHash?: true
   rawQuery?: true
   createdAt?: true
 }
@@ -60,6 +64,7 @@ export type SearchCacheMinAggregateInputType = {
 export type SearchCacheMaxAggregateInputType = {
   id?: true
   queryHash?: true
+  rawQueryHash?: true
   rawQuery?: true
   createdAt?: true
 }
@@ -67,6 +72,7 @@ export type SearchCacheMaxAggregateInputType = {
 export type SearchCacheCountAggregateInputType = {
   id?: true
   queryHash?: true
+  rawQueryHash?: true
   rawQuery?: true
   filters?: true
   resultJobIds?: true
@@ -150,6 +156,7 @@ export type SearchCacheGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inte
 export type SearchCacheGroupByOutputType = {
   id: string
   queryHash: string
+  rawQueryHash: string | null
   rawQuery: string
   filters: runtime.JsonValue
   resultJobIds: string[]
@@ -181,6 +188,7 @@ export type SearchCacheWhereInput = {
   NOT?: Prisma.SearchCacheWhereInput | Prisma.SearchCacheWhereInput[]
   id?: Prisma.StringFilter<"SearchCache"> | string
   queryHash?: Prisma.StringFilter<"SearchCache"> | string
+  rawQueryHash?: Prisma.StringNullableFilter<"SearchCache"> | string | null
   rawQuery?: Prisma.StringFilter<"SearchCache"> | string
   filters?: Prisma.JsonFilter<"SearchCache">
   resultJobIds?: Prisma.StringNullableListFilter<"SearchCache">
@@ -191,6 +199,7 @@ export type SearchCacheWhereInput = {
 export type SearchCacheOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   queryHash?: Prisma.SortOrder
+  rawQueryHash?: Prisma.SortOrderInput | Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   filters?: Prisma.SortOrder
   resultJobIds?: Prisma.SortOrder
@@ -204,6 +213,7 @@ export type SearchCacheWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.SearchCacheWhereInput | Prisma.SearchCacheWhereInput[]
   OR?: Prisma.SearchCacheWhereInput[]
   NOT?: Prisma.SearchCacheWhereInput | Prisma.SearchCacheWhereInput[]
+  rawQueryHash?: Prisma.StringNullableFilter<"SearchCache"> | string | null
   rawQuery?: Prisma.StringFilter<"SearchCache"> | string
   filters?: Prisma.JsonFilter<"SearchCache">
   resultJobIds?: Prisma.StringNullableListFilter<"SearchCache">
@@ -214,6 +224,7 @@ export type SearchCacheWhereUniqueInput = Prisma.AtLeast<{
 export type SearchCacheOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   queryHash?: Prisma.SortOrder
+  rawQueryHash?: Prisma.SortOrderInput | Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   filters?: Prisma.SortOrder
   resultJobIds?: Prisma.SortOrder
@@ -230,6 +241,7 @@ export type SearchCacheScalarWhereWithAggregatesInput = {
   NOT?: Prisma.SearchCacheScalarWhereWithAggregatesInput | Prisma.SearchCacheScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"SearchCache"> | string
   queryHash?: Prisma.StringWithAggregatesFilter<"SearchCache"> | string
+  rawQueryHash?: Prisma.StringNullableWithAggregatesFilter<"SearchCache"> | string | null
   rawQuery?: Prisma.StringWithAggregatesFilter<"SearchCache"> | string
   filters?: Prisma.JsonWithAggregatesFilter<"SearchCache">
   resultJobIds?: Prisma.StringNullableListFilter<"SearchCache">
@@ -240,6 +252,7 @@ export type SearchCacheScalarWhereWithAggregatesInput = {
 export type SearchCacheCreateInput = {
   id?: string
   queryHash: string
+  rawQueryHash?: string | null
   rawQuery: string
   filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resultJobIds?: Prisma.SearchCacheCreateresultJobIdsInput | string[]
@@ -250,6 +263,7 @@ export type SearchCacheCreateInput = {
 export type SearchCacheUncheckedCreateInput = {
   id?: string
   queryHash: string
+  rawQueryHash?: string | null
   rawQuery: string
   filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resultJobIds?: Prisma.SearchCacheCreateresultJobIdsInput | string[]
@@ -260,6 +274,7 @@ export type SearchCacheUncheckedCreateInput = {
 export type SearchCacheUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   queryHash?: Prisma.StringFieldUpdateOperationsInput | string
+  rawQueryHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resultJobIds?: Prisma.SearchCacheUpdateresultJobIdsInput | string[]
@@ -270,6 +285,7 @@ export type SearchCacheUpdateInput = {
 export type SearchCacheUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   queryHash?: Prisma.StringFieldUpdateOperationsInput | string
+  rawQueryHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resultJobIds?: Prisma.SearchCacheUpdateresultJobIdsInput | string[]
@@ -280,6 +296,7 @@ export type SearchCacheUncheckedUpdateInput = {
 export type SearchCacheCreateManyInput = {
   id?: string
   queryHash: string
+  rawQueryHash?: string | null
   rawQuery: string
   filters: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resultJobIds?: Prisma.SearchCacheCreateresultJobIdsInput | string[]
@@ -290,6 +307,7 @@ export type SearchCacheCreateManyInput = {
 export type SearchCacheUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   queryHash?: Prisma.StringFieldUpdateOperationsInput | string
+  rawQueryHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resultJobIds?: Prisma.SearchCacheUpdateresultJobIdsInput | string[]
@@ -300,6 +318,7 @@ export type SearchCacheUpdateManyMutationInput = {
 export type SearchCacheUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   queryHash?: Prisma.StringFieldUpdateOperationsInput | string
+  rawQueryHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawQuery?: Prisma.StringFieldUpdateOperationsInput | string
   filters?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resultJobIds?: Prisma.SearchCacheUpdateresultJobIdsInput | string[]
@@ -318,6 +337,7 @@ export type StringNullableListFilter<$PrismaModel = never> = {
 export type SearchCacheCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   queryHash?: Prisma.SortOrder
+  rawQueryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   filters?: Prisma.SortOrder
   resultJobIds?: Prisma.SortOrder
@@ -328,6 +348,7 @@ export type SearchCacheCountOrderByAggregateInput = {
 export type SearchCacheMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   queryHash?: Prisma.SortOrder
+  rawQueryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -335,6 +356,7 @@ export type SearchCacheMaxOrderByAggregateInput = {
 export type SearchCacheMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   queryHash?: Prisma.SortOrder
+  rawQueryHash?: Prisma.SortOrder
   rawQuery?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -353,6 +375,7 @@ export type SearchCacheUpdateresultJobIdsInput = {
 export type SearchCacheSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   queryHash?: boolean
+  rawQueryHash?: boolean
   rawQuery?: boolean
   filters?: boolean
   resultJobIds?: boolean
@@ -363,6 +386,7 @@ export type SearchCacheSelect<ExtArgs extends runtime.Types.Extensions.InternalA
 export type SearchCacheSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   queryHash?: boolean
+  rawQueryHash?: boolean
   rawQuery?: boolean
   filters?: boolean
   resultJobIds?: boolean
@@ -373,6 +397,7 @@ export type SearchCacheSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
 export type SearchCacheSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   queryHash?: boolean
+  rawQueryHash?: boolean
   rawQuery?: boolean
   filters?: boolean
   resultJobIds?: boolean
@@ -383,6 +408,7 @@ export type SearchCacheSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
 export type SearchCacheSelectScalar = {
   id?: boolean
   queryHash?: boolean
+  rawQueryHash?: boolean
   rawQuery?: boolean
   filters?: boolean
   resultJobIds?: boolean
@@ -390,7 +416,7 @@ export type SearchCacheSelectScalar = {
   createdAt?: boolean
 }
 
-export type SearchCacheOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "queryHash" | "rawQuery" | "filters" | "resultJobIds" | "rerankScores" | "createdAt", ExtArgs["result"]["searchCache"]>
+export type SearchCacheOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "queryHash" | "rawQueryHash" | "rawQuery" | "filters" | "resultJobIds" | "rerankScores" | "createdAt", ExtArgs["result"]["searchCache"]>
 
 export type $SearchCachePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "SearchCache"
@@ -398,6 +424,7 @@ export type $SearchCachePayload<ExtArgs extends runtime.Types.Extensions.Interna
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     queryHash: string
+    rawQueryHash: string | null
     rawQuery: string
     filters: runtime.JsonValue
     resultJobIds: string[]
@@ -828,6 +855,7 @@ export interface Prisma__SearchCacheClient<T, Null = never, ExtArgs extends runt
 export interface SearchCacheFieldRefs {
   readonly id: Prisma.FieldRef<"SearchCache", 'String'>
   readonly queryHash: Prisma.FieldRef<"SearchCache", 'String'>
+  readonly rawQueryHash: Prisma.FieldRef<"SearchCache", 'String'>
   readonly rawQuery: Prisma.FieldRef<"SearchCache", 'String'>
   readonly filters: Prisma.FieldRef<"SearchCache", 'Json'>
   readonly resultJobIds: Prisma.FieldRef<"SearchCache", 'String[]'>

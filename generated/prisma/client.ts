@@ -111,3 +111,8 @@ export type EvalRun = Prisma.EvalRunModel
  * 
  */
 export type EventLog = Prisma.EventLogModel
+/**
+ * Model AtsTenant
+ * 
+ */
+export type AtsTenant = Prisma.AtsTenantModel

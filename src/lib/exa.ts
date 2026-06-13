@@ -2,6 +2,7 @@ import Exa from "exa-js";
 import type { Filters, ExaResult } from "@/types/job";
 import { EXA_NUM_RESULTS } from "@/lib/config";
 import { filterResults, type FilterReport } from "@/lib/retrieval-quality";
+import { countryCodeForLocation } from "@/lib/city-synonyms";
 
 const ATS_DOMAINS = [
   "greenhouse.io",
@@ -29,6 +30,11 @@ function getExa(): Exa {
   return exaClient;
 }
 
+function getUserLocation(filters: Filters): string | undefined {
+  if (filters.remote === true && !filters.location) return undefined;
+  return countryCodeForLocation(filters.location) ?? "US";
+}
+
 function buildQueryString(filters: Filters): string {
   const parts: string[] = [];
 
@@ -50,6 +56,8 @@ function buildQueryString(filters: Filters): string {
   return q;
 }
 
+export const __test__ = { buildQueryString, getUserLocation };
+
 export async function searchJobsWithReport(
   query: string,
   filters: Filters,
@@ -66,8 +74,10 @@ export async function searchJobsWithReport(
       highlights: { numSentences: 3 },
     },
     includeDomains: ATS_DOMAINS,
-    userLocation: "US",
   };
+
+  const userLocation = getUserLocation(filters);
+  if (userLocation) params.userLocation = userLocation;
 
   if (filters.freshnessDays && filters.freshnessDays > 0) {
     const since = new Date();
@@ -79,7 +89,7 @@ export async function searchJobsWithReport(
   const response = await exa.searchAndContents(queryStr, { ...params, signal } as any);
 
   if (!response.results?.length) {
-    return { results: [], quality: { kept: 0, denylist_path: 0, ats_url_not_individual_job: 0, no_signals: 0 } };
+    return { results: [], quality: { kept: 0, denylist_path: 0, denylist_title: 0, ats_url_not_individual_job: 0, no_signals: 0 } };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -91,6 +101,7 @@ export async function searchJobsWithReport(
     highlights: r.highlights || [],
     publishedDate: r.publishedDate,
     author: r.author,
+    company: r.author,
   }));
 
   // Drop denylisted URLs (Ashby /blog/, /resources/, Workable /post-jobs-for-free/, etc.)

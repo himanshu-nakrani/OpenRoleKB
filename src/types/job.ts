@@ -5,6 +5,7 @@ export interface Filters {
   location?: string;
   remote?: boolean;
   salaryMin?: number;
+  yearsExperience?: number;
   exclude?: string[];
   freshnessDays?: number;
 }
@@ -17,6 +18,8 @@ export interface ExaResult {
   highlights: string[];
   publishedDate?: string;
   author?: string;
+  company?: string;
+  location?: string;
   /**
    * Last time we observed this job in any search result. Populated only on
    * cache-hit (`adaptToExaShape`); undefined for fresh-from-Exa rows because

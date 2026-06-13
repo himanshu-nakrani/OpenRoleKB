@@ -397,7 +397,8 @@ export const ModelName = {
   VerificationToken: 'VerificationToken',
   TransferCode: 'TransferCode',
   EvalRun: 'EvalRun',
-  EventLog: 'EventLog'
+  EventLog: 'EventLog',
+  AtsTenant: 'AtsTenant'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -413,7 +414,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "job" | "searchCache" | "savedSearch" | "savedSearchRun" | "jobInteraction" | "hiddenCompany" | "feedbackEvent" | "user" | "account" | "session" | "verificationToken" | "transferCode" | "evalRun" | "eventLog"
+    modelProps: "job" | "searchCache" | "savedSearch" | "savedSearchRun" | "jobInteraction" | "hiddenCompany" | "feedbackEvent" | "user" | "account" | "session" | "verificationToken" | "transferCode" | "evalRun" | "eventLog" | "atsTenant"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1453,6 +1454,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    AtsTenant: {
+      payload: Prisma.$AtsTenantPayload<ExtArgs>
+      fields: Prisma.AtsTenantFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AtsTenantFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AtsTenantPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AtsTenantFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AtsTenantPayload>
+        }
+        findFirst: {
+          args: Prisma.AtsTenantFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AtsTenantPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AtsTenantFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AtsTenantPayload>
+        }
+        findMany: {
+          args: Prisma.AtsTenantFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AtsTenantPayload>[]
+        }
+        create: {
+          args: Prisma.AtsTenantCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AtsTenantPayload>
+        }
+        createMany: {
+          args: Prisma.AtsTenantCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AtsTenantCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AtsTenantPayload>[]
+        }
+        delete: {
+          args: Prisma.AtsTenantDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AtsTenantPayload>
+        }
+        update: {
+          args: Prisma.AtsTenantUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AtsTenantPayload>
+        }
+        deleteMany: {
+          args: Prisma.AtsTenantDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AtsTenantUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AtsTenantUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AtsTenantPayload>[]
+        }
+        upsert: {
+          args: Prisma.AtsTenantUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AtsTenantPayload>
+        }
+        aggregate: {
+          args: Prisma.AtsTenantAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAtsTenant>
+        }
+        groupBy: {
+          args: Prisma.AtsTenantGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AtsTenantGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AtsTenantCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AtsTenantCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1517,6 +1592,7 @@ export type JobScalarFieldEnum = (typeof JobScalarFieldEnum)[keyof typeof JobSca
 export const SearchCacheScalarFieldEnum = {
   id: 'id',
   queryHash: 'queryHash',
+  rawQueryHash: 'rawQueryHash',
   rawQuery: 'rawQuery',
   filters: 'filters',
   resultJobIds: 'resultJobIds',
@@ -1692,6 +1768,24 @@ export const EventLogScalarFieldEnum = {
 } as const
 
 export type EventLogScalarFieldEnum = (typeof EventLogScalarFieldEnum)[keyof typeof EventLogScalarFieldEnum]
+
+
+export const AtsTenantScalarFieldEnum = {
+  id: 'id',
+  ats: 'ats',
+  slug: 'slug',
+  companyName: 'companyName',
+  discoveredAt: 'discoveredAt',
+  verifiedAt: 'verifiedAt',
+  lastFetchAt: 'lastFetchAt',
+  status: 'status',
+  jobsLastSeen: 'jobsLastSeen',
+  hasIndianJobs: 'hasIndianJobs',
+  source: 'source',
+  notes: 'notes'
+} as const
+
+export type AtsTenantScalarFieldEnum = (typeof AtsTenantScalarFieldEnum)[keyof typeof AtsTenantScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1940,6 +2034,7 @@ export type GlobalOmitConfig = {
   transferCode?: Prisma.TransferCodeOmit
   evalRun?: Prisma.EvalRunOmit
   eventLog?: Prisma.EventLogOmit
+  atsTenant?: Prisma.AtsTenantOmit
 }
 
 /* Types for Logging */

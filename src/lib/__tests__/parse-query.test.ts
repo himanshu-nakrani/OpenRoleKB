@@ -1,5 +1,24 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+
+const { mockCreate, mockWarn } = vi.hoisted(() => ({
+  mockCreate: vi.fn(),
+  mockWarn: vi.fn(),
+}));
+
+vi.mock("@/lib/llm", () => ({
+  getLLM: () => ({ chat: { completions: { create: mockCreate } } }),
+  getLLMModel: () => "gemini-flash-latest",
+  getLLMReasoningEffort: () => "none",
+}));
+vi.mock("@/lib/logger", () => ({ log: { warn: mockWarn, info: vi.fn(), debug: vi.fn(), error: vi.fn() } }));
+
 import { sanitizeFilters, parseQuery } from "@/lib/parse-query";
+
+beforeEach(() => {
+  mockCreate.mockReset();
+  mockWarn.mockReset();
+  mockCreate.mockRejectedValue(new Error("LLM unavailable"));
+});
 
 describe("sanitizeFilters", () => {
   it("returns empty filters for non-object input", () => {
@@ -30,6 +49,11 @@ describe("sanitizeFilters", () => {
 
   it("rejects salaryMin as string", () => {
     expect(sanitizeFilters({ salaryMin: "120k" })).toEqual({});
+  });
+
+  it("accepts and floors yearsExperience", () => {
+    expect(sanitizeFilters({ yearsExperience: 3.9 })).toEqual({ yearsExperience: 3 });
+    expect(sanitizeFilters({ yearsExperience: "3" })).toEqual({});
   });
 
   it("rejects negative salaryMin", () => {
@@ -123,11 +147,39 @@ describe("parseQuery fast-path", () => {
   });
 
   it("still uses LLM for queries with filter triggers (remote, senior, etc.)", async () => {
-    // These should NOT hit fast-path (we can't fully assert LLM call without mocking here,
-    // but the presence of trigger words means it will attempt the real path or error gracefully in test env)
     const result = await parseQuery("senior react remote eu");
-    // Either fast-path didn't trigger, or it fell back
+    expect(mockCreate).toHaveBeenCalledOnce();
     expect(result.filters.role).toBeDefined();
+  });
+
+
+  it("degrades the Hyderabad years regression without an LLM call", async () => {
+    const result = await parseQuery("ai engineer role in hyderabad for 3 years of experience");
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(result.tokens).toBe(0);
+    expect(result.filters).toEqual({
+      role: "ai engineer",
+      location: "Hyderabad",
+      yearsExperience: 3,
+    });
+  });
+
+  it("does not fast-path city-constrained queries", async () => {
+    await parseQuery("data engineer pune or mumbai");
+    expect(mockCreate).toHaveBeenCalledOnce();
+  });
+
+  it("degrades country-constrained remote queries", async () => {
+    const result = await parseQuery("remote react developer india");
+    expect(result.filters).toMatchObject({ role: "react developer", location: "india", remote: true });
+  });
+
+  it("logs parse errors at warn level and returns degraded filters", async () => {
+    mockCreate.mockRejectedValueOnce(new Error("Gemini timeout"));
+    const result = await parseQuery("senior backend engineer in bangalore");
+    expect(mockWarn).toHaveBeenCalledWith({ evt: "parse_error", parseError: "Gemini timeout" });
+    expect(result.parseError).toBe("Gemini timeout");
+    expect(result.filters).toMatchObject({ role: "senior backend engineer", location: "Bengaluru" });
   });
 
   it("fast-paths very short clean role queries", async () => {

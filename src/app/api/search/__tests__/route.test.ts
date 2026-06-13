@@ -14,7 +14,9 @@ const rerankFixture = JSON.parse(
 const mockParseQuery = vi.fn();
 const mockSearchJobs = vi.fn();
 const mockSearchJobsWithReport = vi.fn();
-const EMPTY_QUALITY = { kept: 0, denylist_path: 0, ats_url_not_individual_job: 0, no_signals: 0 };
+const mockSearchLocalJobs = vi.fn();
+const EMPTY_QUALITY = { kept: 0, denylist_path: 0, denylist_title: 0, ats_url_not_individual_job: 0, no_signals: 0 };
+const EMPTY_LOCAL = { results: [], rawHits: 0, tsquery: null };
 const mockRerank = vi.fn();
 const mockRerankWithMetrics = vi.fn();
 const mockCacheSearch = vi.fn();
@@ -26,13 +28,14 @@ vi.mock("@/lib/exa", () => ({
   searchJobs: mockSearchJobs,
   searchJobsWithReport: mockSearchJobsWithReport,
 }));
+vi.mock("@/lib/local-search", () => ({ searchLocalJobs: mockSearchLocalJobs }));
 vi.mock("@/lib/rerank", () => ({ rerank: mockRerank, rerankWithMetrics: mockRerankWithMetrics }));
-vi.mock("@/lib/cache", () => ({ cacheSearch: mockCacheSearch, getCachedSearch: mockGetCachedSearch }));
+vi.mock("@/lib/cache", () => ({ cacheSearch: mockCacheSearch, getCachedSearch: mockGetCachedSearch, getCachedSearchByRawQuery: vi.fn().mockResolvedValue(null) }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: mockRateLimit }));
 vi.mock("@/lib/owner", () => ({ getOwnerKey: vi.fn().mockResolvedValue(null), normalizeOwnerKey: vi.fn().mockReturnValue(null) }));
 
 // Import AFTER mocks are set up
-const { POST } = await import("@/app/api/search/route");
+const { POST, dedupeSearchResults } = await import("@/app/api/search/route");
 
 interface SSEEvent {
   event: string;
@@ -69,6 +72,10 @@ async function readSSEStream(response: Response): Promise<SSEEvent[]> {
 describe("POST /api/search", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: local search returns nothing — preserves the existing
+    // test intent (cache miss → Exa). Tests that want to exercise the
+    // local-hit path override this explicitly.
+    mockSearchLocalJobs.mockResolvedValue(EMPTY_LOCAL);
   });
 
   it("returns 429 when rate limited", async () => {
@@ -258,5 +265,99 @@ describe("POST /api/search", () => {
     expect(events.some((e) => e.event === "results")).toBe(true);
     expect(events.some((e) => e.event === "rerank")).toBe(true);
     expect(events.some((e) => e.event === "done")).toBe(true);
+  });
+
+  it("skips Exa entirely when local search returns ≥ fallback threshold (Layer A only)", async () => {
+    // 5 local results — at the threshold — should skip Exa.
+    const localResults = fixtures.slice(0, 5);
+    mockRateLimit.mockResolvedValue({ ok: true });
+    mockGetCachedSearch.mockResolvedValue(null);
+    mockParseQuery.mockResolvedValue({ filters: { role: "engineer" }, rawQuery: "engineer" });
+    mockSearchLocalJobs.mockResolvedValue({ results: localResults, rawHits: 5, tsquery: "engineer" });
+    mockRerankWithMetrics.mockResolvedValue({
+      items: localResults.map((_: unknown, i: number) => ({ idx: i, score: 0.8, fit: "good" })),
+      tokens: 100,
+    });
+    mockCacheSearch.mockResolvedValue("cache-local-only");
+
+    const req = new NextRequest("http://localhost/api/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: "engineer" }),
+    });
+
+    const res = await POST(req);
+    const events = await readSSEStream(res);
+
+    // Exa must not be called when local has enough results.
+    expect(mockSearchJobsWithReport).not.toHaveBeenCalled();
+    expect(mockSearchLocalJobs).toHaveBeenCalledOnce();
+    // Single results + single rerank + done — no second pass for Exa.
+    const resultsEvents = events.filter((e) => e.event === "results");
+    const rerankEvents = events.filter((e) => e.event === "rerank");
+    expect(resultsEvents.length).toBe(1);
+    expect(rerankEvents.length).toBe(1);
+    expect(events.some((e) => e.event === "done")).toBe(true);
+  });
+
+
+  it("dedupes results by stripped URL and company-title-location content key", () => {
+    const deduped = dedupeSearchResults([
+      { id: "local", title: "Software Engineer", url: "https://jobs.lever.co/acme/123?src=foo#apply", text: "", highlights: [], company: "Acme", location: "Bengaluru" },
+      { id: "url-dupe", title: "Software Engineer", url: "https://jobs.lever.co/acme/123", text: "", highlights: [], company: "Acme", location: "Bengaluru" },
+      { id: "content-dupe", title: " software engineer ", url: "https://boards.greenhouse.io/acme/jobs/999", text: "", highlights: [], company: "ACME", location: "bengaluru" },
+      { id: "other-location", title: "Software Engineer", url: "https://boards.greenhouse.io/acme/jobs/888", text: "", highlights: [], company: "Acme", location: "Hyderabad" },
+    ]);
+
+    expect(deduped.map((r) => r.id)).toEqual(["local", "other-location"]);
+  });
+
+  it("dedupes locale-prefixed URLs against their canonical counterpart", () => {
+    // /de/about-us/x and /about-us/x should collapse to the same dedup key
+    const deduped = dedupeSearchResults([
+      { id: "canonical", title: "Some Page", url: "https://www.smartrecruiters.com/about-us/leadership/michal-nowak", text: "", highlights: [] },
+      { id: "locale-de", title: "Some Page", url: "https://www.smartrecruiters.com/de/about-us/leadership/michal-nowak", text: "", highlights: [] },
+      { id: "locale-en-us", title: "Some Page", url: "https://www.smartrecruiters.com/en-us/about-us/leadership/michal-nowak", text: "", highlights: [] },
+    ]);
+    // Only the first (canonical) should survive; the two locale-prefixed variants collapse.
+    expect(deduped.map((r) => r.id)).toEqual(["canonical"]);
+  });
+
+  it("emits two results+rerank passes when local is below threshold (local first, then merged with Exa)", async () => {
+    const localResults = fixtures.slice(0, 2); // below threshold of 5
+    const exaResults = fixtures.slice(2, 5); // 3 fresh URLs (fixture only has 5 total)
+    mockRateLimit.mockResolvedValue({ ok: true });
+    mockGetCachedSearch.mockResolvedValue(null);
+    mockParseQuery.mockResolvedValue({ filters: { role: "rust" }, rawQuery: "rust" });
+    mockSearchLocalJobs.mockResolvedValue({ results: localResults, rawHits: 2, tsquery: "rust" });
+    mockSearchJobsWithReport.mockResolvedValue({ results: exaResults, quality: EMPTY_QUALITY });
+    mockRerankWithMetrics
+      .mockResolvedValueOnce({
+        items: localResults.map((_: unknown, i: number) => ({ idx: i, score: 0.7, fit: "" })),
+        tokens: 40,
+      })
+      .mockResolvedValueOnce({
+        items: [...localResults, ...exaResults].map((_: unknown, i: number) => ({ idx: i, score: 0.6, fit: "" })),
+        tokens: 80,
+      });
+    mockCacheSearch.mockResolvedValue("cache-hybrid");
+
+    const req = new NextRequest("http://localhost/api/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: "rust" }),
+    });
+
+    const res = await POST(req);
+    const events = await readSSEStream(res);
+
+    const resultsEvents = events.filter((e) => e.event === "results");
+    const rerankEvents = events.filter((e) => e.event === "rerank");
+    // First pass: local only. Second pass: local + Exa merged.
+    expect(resultsEvents.length).toBe(2);
+    expect(rerankEvents.length).toBe(2);
+    expect((resultsEvents[0].data as Array<unknown>).length).toBe(2);
+    expect((resultsEvents[1].data as Array<unknown>).length).toBe(5);
+    expect(mockSearchJobsWithReport).toHaveBeenCalledOnce();
   });
 });

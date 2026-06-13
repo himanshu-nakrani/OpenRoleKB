@@ -5,6 +5,8 @@ vi.mock("@/lib/llm", () => ({
   getLLM: () => ({
     chat: { completions: { create: mockCreate } },
   }),
+  getLLMModel: () => "gemini-flash-latest",
+  getLLMReasoningEffort: () => "none",
 }));
 
 const { rerankWithMetrics, rerank } = await import("@/lib/rerank");
@@ -76,12 +78,12 @@ describe("rerankWithMetrics", () => {
     expect(r.items[0].idx).toBe(0);
   });
 
-  it("truncates oversized fit strings to 120 chars", async () => {
+  it("truncates oversized fit strings to 80 chars", async () => {
     mockLLMResponse({
       results: [{ idx: 0, score: 0.9, fit: "x".repeat(500) }],
     });
     const r = await rerankWithMetrics("q", results);
-    expect(r.items[0].fit.length).toBe(120);
+    expect(r.items[0].fit.length).toBe(80);
   });
 
   it("returns empty for empty input", async () => {
@@ -105,6 +107,49 @@ describe("rerankWithMetrics", () => {
     });
     const r = await rerankWithMetrics("q", results);
     expect(r.items.map((it) => it.score)).toEqual([0.9, 0.7, 0.3]);
+  });
+
+
+  it("scores large result sets in batches and merges by original idx", async () => {
+    const manyResults = Array.from({ length: 32 }, (_, i) => ({
+      id: `j${i}`,
+      title: `Job ${i}`,
+      url: `https://example.com/${i}`,
+      text: `desc ${i}`,
+      highlights: [],
+    }));
+
+    mockCreate.mockImplementation(async (...args: unknown[]) => {
+      const params = args.find((arg): arg is { messages: Array<{ content: string }> } =>
+        typeof arg === "object" && arg !== null && "messages" in arg,
+      );
+      const content = params?.messages.at(-1)?.content ?? "";
+      const indices = Array.from(content.matchAll(/^(\d+)\. /gm), (m) => Number(m[1]));
+      return {
+        usage: { total_tokens: 100 + indices.length },
+        choices: [{
+          message: {
+            tool_calls: [{
+              type: "function",
+              function: {
+                name: "rate_results",
+                arguments: JSON.stringify({
+                  results: indices.map((idx) => ({ idx, score: idx / 100, fit: `fit ${idx}` })),
+                }),
+              },
+            }],
+          },
+        }],
+      };
+    });
+
+    const r = await rerankWithMetrics("q", manyResults);
+
+    expect(mockCreate).toHaveBeenCalledTimes(3);
+    expect(r.tokens).toBe((100 + 15) + (100 + 15) + (100 + 2));
+    expect(r.items).toHaveLength(32);
+    expect(r.items[0]).toEqual({ idx: 31, score: 0.31, fit: "fit 31" });
+    expect(new Set(r.items.map((it) => it.idx)).size).toBe(32);
   });
 
   it("falls back to uniform 0.5 scores when tool call is missing", async () => {

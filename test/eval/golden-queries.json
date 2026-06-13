@@ -6,9 +6,18 @@
       "topNMustMatch": {
         "n": 5,
         "minScore": 0.6,
-        "titleContainsAny": ["react", "frontend", "full[- ]stack"]
+        "titleContainsAny": [
+          "react",
+          "frontend",
+          "full[- ]stack"
+        ]
       },
-      "mustExcludeCompanies": ["coinbase", "binance", "kraken", "chainalysis"],
+      "mustExcludeCompanies": [
+        "coinbase",
+        "binance",
+        "kraken",
+        "chainalysis"
+      ],
       "topResultMinScore": 0.7
     }
   },
@@ -19,7 +28,11 @@
       "topNMustMatch": {
         "n": 5,
         "minScore": 0.55,
-        "titleContainsAny": ["product manager", "associate product", "apm"]
+        "titleContainsAny": [
+          "product manager",
+          "associate product",
+          "apm"
+        ]
       },
       "topResultMinScore": 0.6,
       "noSeniorRoles": true
@@ -32,7 +45,11 @@
       "topNMustMatch": {
         "n": 5,
         "minScore": 0.55,
-        "titleContainsAny": ["data engineer", "analytics engineer", "platform engineer"]
+        "titleContainsAny": [
+          "data engineer",
+          "analytics engineer",
+          "platform engineer"
+        ]
       },
       "topResultMinScore": 0.65
     }
@@ -44,7 +61,12 @@
       "topNMustMatch": {
         "n": 5,
         "minScore": 0.55,
-        "titleContainsAny": ["rust", "systems", "backend", "infrastructure"]
+        "titleContainsAny": [
+          "rust",
+          "systems",
+          "backend",
+          "infrastructure"
+        ]
       },
       "topResultMinScore": 0.65
     }
@@ -56,7 +78,11 @@
       "topNMustMatch": {
         "n": 3,
         "minScore": 0.5,
-        "titleContainsAny": ["product manager", "head of product", "founding"]
+        "titleContainsAny": [
+          "product manager",
+          "head of product",
+          "founding"
+        ]
       },
       "topResultMinScore": 0.55
     }
@@ -68,7 +94,13 @@
       "topNMustMatch": {
         "n": 5,
         "minScore": 0.55,
-        "titleContainsAny": ["staff", "principal", "machine learning", "ml engineer", "python"]
+        "titleContainsAny": [
+          "staff",
+          "principal",
+          "machine learning",
+          "ml engineer",
+          "python"
+        ]
       },
       "topResultMinScore": 0.65
     }
@@ -80,7 +112,11 @@
       "topNMustMatch": {
         "n": 3,
         "minScore": 0.5,
-        "titleContainsAny": ["design engineer", "ux engineer", "design technologist"]
+        "titleContainsAny": [
+          "design engineer",
+          "ux engineer",
+          "design technologist"
+        ]
       }
     }
   },
@@ -88,8 +124,18 @@
     "name": "smart-contracts-deliberate-exclusion",
     "query": "backend engineer, NOT crypto or blockchain",
     "expectations": {
-      "mustExcludeCompanies": ["coinbase", "binance", "kraken", "chainalysis"],
-      "mustExcludeKeywordsInTitle": ["blockchain", "smart contract", "crypto", "web3"],
+      "mustExcludeCompanies": [
+        "coinbase",
+        "binance",
+        "kraken",
+        "chainalysis"
+      ],
+      "mustExcludeKeywordsInTitle": [
+        "blockchain",
+        "smart contract",
+        "crypto",
+        "web3"
+      ],
       "topResultMinScore": 0.5
     }
   },
@@ -100,7 +146,13 @@
       "topNMustMatch": {
         "n": 5,
         "minScore": 0.5,
-        "titleContainsAny": ["junior", "associate", "engineer i", "engineer 1", "engineer"]
+        "titleContainsAny": [
+          "junior",
+          "associate",
+          "engineer i",
+          "engineer 1",
+          "engineer"
+        ]
       },
       "noSeniorRoles": true
     }
@@ -112,9 +164,82 @@
       "topNMustMatch": {
         "n": 5,
         "minScore": 0.55,
-        "titleContainsAny": ["platform", "infrastructure", "devops", "sre", "site reliability"]
+        "titleContainsAny": [
+          "platform",
+          "infrastructure",
+          "devops",
+          "sre",
+          "site reliability"
+        ]
       },
       "topResultMinScore": 0.65
+    }
+  },
+  {
+    "name": "senior-backend-bangalore",
+    "query": "senior backend engineer in bangalore",
+    "expectations": {
+      "topNMustMatch": {
+        "n": 3,
+        "minScore": 0.5,
+        "titleContainsAny": [
+          "backend",
+          "software",
+          "sde",
+          "engineer"
+        ]
+      },
+      "topResultMinScore": 0.5
+    }
+  },
+  {
+    "name": "ai-engineer-hyderabad-3-years",
+    "query": "ai engineer role in hyderabad for 3 years of experience",
+    "expectations": {
+      "topNMustMatch": {
+        "n": 3,
+        "minScore": 0.5,
+        "titleContainsAny": [
+          "ai",
+          "ml",
+          "machine learning",
+          "data",
+          "software",
+          "engineer"
+        ]
+      },
+      "topResultMinScore": 0.5
+    }
+  },
+  {
+    "name": "remote-react-developer-india",
+    "query": "remote react developer india",
+    "expectations": {
+      "topResultMinScore": 0.1
+    }
+  },
+  {
+    "name": "data-engineer-pune-mumbai",
+    "query": "data engineer pune or mumbai",
+    "expectations": {
+      "topNMustMatch": {
+        "n": 3,
+        "minScore": 0.4,
+        "titleContainsAny": [
+          "data engineer",
+          "analytics engineer",
+          "data",
+          "engineer"
+        ]
+      },
+      "topResultMinScore": 0.4
+    }
+  },
+  {
+    "name": "sde-2-flipkart-bangalore",
+    "query": "sde 2 flipkart bangalore",
+    "expectations": {
+      "topResultMinScore": 0.4
     }
   }
 ]
