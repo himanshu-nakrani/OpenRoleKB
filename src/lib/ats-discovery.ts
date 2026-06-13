@@ -197,7 +197,9 @@ export async function discoverFromSitemaps(options: DiscoveryOptions = {}): Prom
 }
 
 export async function discoverFromCorpusHints(options: DiscoveryOptions = {}): Promise<Candidate[]> {
-  const rows = await prisma.job.findMany({ select: { url: true }, where: { source: { in: selectedAts(options) } } });
+  // Scan all URLs, not just rows whose source is already a direct adapter: Exa
+  // often finds ATS-hosted postings before we have a tenant in a native adapter.
+  const rows = await prisma.job.findMany({ select: { url: true } });
   const candidates = rows
     .map((row) => extractCandidateFromUrl(row.url, `hint:${row.url}`))
     .filter((c): c is Candidate => Boolean(c))
