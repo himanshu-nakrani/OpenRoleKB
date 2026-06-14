@@ -7,6 +7,7 @@
  *   npx tsx scripts/eval.ts --refresh-snapshots # re-fetches Exa for every case
  *   npx tsx scripts/eval.ts --case <name>       # run a single case
  *   npx tsx scripts/eval.ts --dry-run           # parse + score against synthetic rerank; no API calls
+ *   npx tsx scripts/eval.ts --cheap             # deterministic checks only; skips rerank+judge; $0
  *   npx tsx scripts/eval.ts --no-write          # don't write EvalRun rows
  *
  * Exit codes:
@@ -27,7 +28,8 @@ import { dedupeSearchResults, applySeniorityFilter, applyExclusionFilter } from 
 import { prisma } from "@/lib/prisma";
 import { hasSnapshot, loadSnapshot, writeSnapshot } from "../test/eval/snapshot-cache";
 import { scoreCase } from "../test/eval/score";
-import type { GoldenCase, CaseResult, EvalReport } from "../test/eval/types";
+import { judge, type JudgeRow } from "../test/eval/judge";
+import type { GoldenCase, CaseResult, EvalReport, DimensionResult } from "../test/eval/types";
 import type { ExaResult, Filters, RerankItem } from "@/types/job";
 
 const args = process.argv.slice(2);
@@ -41,6 +43,7 @@ const DRY_RUN = flag("--dry-run");
 const REFRESH = flag("--refresh-snapshots");
 const NO_WRITE = flag("--no-write");
 const ONLY_CASE = argValue("--case");
+const CHEAP = flag("--cheap");
 
 const GEMINI_USD_PER_1K_TOKENS = 0.0014;
 
@@ -77,21 +80,79 @@ function syntheticRerank(exa: ExaResult[]): { items: RerankItem[]; tokens?: numb
   return { items, tokens: 0 };
 }
 
-async function runCase(c: GoldenCase): Promise<CaseResult> {
-  const t0 = Date.now();
+interface SingleRunOutput {
+  exa: ExaResult[];
+  items: RerankItem[];
+  rerankTokens?: number;
+}
+
+async function executeOnce(c: GoldenCase): Promise<SingleRunOutput> {
   const parsed = await parseQuery(c.query);
   const exa = await candidatesForCase(c);
-  const r = DRY_RUN
+  const r = DRY_RUN || CHEAP
     ? syntheticRerank(exa)
     : await rerankWithMetrics(c.query, exa);
-  // Mirror the production post-filters so the eval grades what users actually see.
   let items = r.items;
   items = applySeniorityFilter(items, exa, parsed.filters);
   items = applyExclusionFilter(items, exa, parsed.filters);
+  return { exa, items, rerankTokens: r.tokens };
+}
+
+async function runCase(c: GoldenCase): Promise<CaseResult> {
+  const t0 = Date.now();
+  const first = await executeOnce(c);
+  let { exa, items, rerankTokens } = first;
+
+  // Stability check: re-execute and compare top-N IDs against the first run.
+  let stableDim: DimensionResult | undefined;
+  if (c.expectations.stableTopN) {
+    const { n, runs } = c.expectations.stableTopN;
+    const baselineIds = first.items.slice(0, n).map((it) => first.exa[it.idx]?.id ?? `idx:${it.idx}`);
+    const mismatches: string[] = [];
+    for (let i = 1; i < runs; i++) {
+      const next = await executeOnce(c);
+      rerankTokens = (rerankTokens ?? 0) + (next.rerankTokens ?? 0);
+      const nextIds = next.items.slice(0, n).map((it) => next.exa[it.idx]?.id ?? `idx:${it.idx}`);
+      const ok = baselineIds.length === nextIds.length && baselineIds.every((id, k) => id === nextIds[k]);
+      if (!ok) mismatches.push(`run ${i + 1}: [${nextIds.slice(0, 3).join(", ")}] ≠ baseline [${baselineIds.slice(0, 3).join(", ")}]`);
+    }
+    stableDim = {
+      name: "system.stableTopN",
+      passed: mismatches.length === 0,
+      detail: mismatches.length === 0
+        ? `top-${n} identical across ${runs} runs`
+        : `${mismatches.length}/${runs - 1} subsequent runs diverged`,
+      offenders: mismatches.slice(0, 3),
+    };
+  }
+
+  // LLM judge — independent rubric, runs only when the case requests it.
+  let judgeRows: JudgeRow[] | undefined;
+  let judgeTokens: number | undefined;
+  if (!CHEAP && !DRY_RUN && c.expectations.judge && items.length > 0) {
+    const n = c.expectations.judge.n;
+    const top = items.slice(0, n).map((it) => ({ result: exa[it.idx], idx: it.idx }));
+    const j = await judge(c.query, top);
+    judgeRows = j.rows;
+    judgeTokens = j.tokens;
+  }
+
   const durationMs = Date.now() - t0;
-  const tokens = r.tokens;
-  const costUsd = tokens != null ? (tokens / 1000) * GEMINI_USD_PER_1K_TOKENS : undefined;
-  return scoreCase(c, exa, items, durationMs, tokens, costUsd);
+  const tokens = (rerankTokens ?? 0) + (judgeTokens ?? 0);
+  const costUsd = tokens > 0 ? (tokens / 1000) * GEMINI_USD_PER_1K_TOKENS : undefined;
+  const cr = scoreCase(c, exa, items, durationMs, tokens, costUsd, judgeRows, { cheap: CHEAP });
+  if (stableDim) {
+    cr.dimensions = [...(cr.dimensions ?? []), stableDim];
+    if (!stableDim.passed) {
+      cr.passed = false;
+      cr.failures.push(`${stableDim.name}: ${stableDim.detail}`);
+      // Re-derive score with the new dimension included
+      const total = cr.dimensions.length;
+      const passing = cr.dimensions.filter((d) => d.passed).length;
+      cr.score = total === 0 ? 1 : passing / total;
+    }
+  }
+  return cr;
 }
 
 async function main() {
@@ -107,7 +168,8 @@ async function main() {
   const rubricSha = await rubricSignature();
   const startedAt = new Date().toISOString();
 
-  console.error(`▶ Eval run ${runId.slice(0, 8)} — ${cases.length} cases (rubric ${rubricSha.slice(0, 8)})${DRY_RUN ? " [dry-run]" : ""}`);
+  const mode = CHEAP ? " [cheap]" : DRY_RUN ? " [dry-run]" : "";
+  console.error(`▶ Eval run ${runId.slice(0, 8)} — ${cases.length} cases (rubric ${rubricSha.slice(0, 8)})${mode}`);
 
   const results: CaseResult[] = [];
   for (const c of cases) {
@@ -160,7 +222,7 @@ async function main() {
   console.error("");
   console.error(`▶ pass=${(passRate * 100).toFixed(0)}%  avg_score=${avgScore.toFixed(2)}  tokens=${totalTokens}  cost=$${totalCostUsd.toFixed(4)}`);
 
-  if (!NO_WRITE && !DRY_RUN) {
+  if (!NO_WRITE && !DRY_RUN && !CHEAP) {
     await writeEvalRows(report);
     console.error(`▶ wrote ${results.length} EvalRun rows`);
   }
@@ -184,6 +246,7 @@ async function writeEvalRows(report: EvalReport) {
       score: r.score,
       passed: r.passed,
       failures: r.failures,
+      dimensions: (r.dimensions ?? []) as object,
       durationMs: r.durationMs,
       tokens: r.tokens,
       costUsd: r.costUsd,

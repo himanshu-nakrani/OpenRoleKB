@@ -254,6 +254,7 @@ export const EvalRunScalarFieldEnum = {
   score: 'score',
   passed: 'passed',
   failures: 'failures',
+  dimensions: 'dimensions',
   durationMs: 'durationMs',
   tokens: 'tokens',
   costUsd: 'costUsd',

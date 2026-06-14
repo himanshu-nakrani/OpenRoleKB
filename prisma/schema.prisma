@@ -179,6 +179,7 @@ model EvalRun {
   score       Float
   passed      Boolean
   failures    Json     @default("[]")
+  dimensions  Json     @default("[]")
   durationMs  Int
   tokens      Int?
   costUsd     Float?

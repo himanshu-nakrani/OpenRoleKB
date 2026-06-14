@@ -334,5 +334,36 @@
         "minHitRate": 0.6
       }
     }
+  },
+  {
+    "name": "stability-junior-pm-bangalore-x2",
+    "query": "junior product manager in Bangalore",
+    "expectations": {
+      "stableTopN": {
+        "n": 3,
+        "runs": 2
+      }
+    }
+  },
+  {
+    "name": "judge-junior-pm-bangalore",
+    "query": "junior product manager in Bangalore",
+    "expectations": {
+      "judge": {
+        "n": 5,
+        "minMeanRelevance": 0.55,
+        "minPerItemRelevance": 0.15
+      }
+    }
+  },
+  {
+    "name": "judge-data-eng-airflow",
+    "query": "data engineer with python and airflow, remote India",
+    "expectations": {
+      "judge": {
+        "n": 3,
+        "minMeanRelevance": 0.35
+      }
+    }
   }
 ]

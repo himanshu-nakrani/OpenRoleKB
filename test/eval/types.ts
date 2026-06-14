@@ -53,6 +53,28 @@ export interface GoldenExpectation {
 
   /** No ATS marketing / report / blog / webinar URLs in the result set. */
   expectNoMetaPages?: boolean;
+
+  /**
+   * LLM-judge expectation. Skipped under --cheap.
+   *  - minMeanRelevance: mean(overall.score) across top-N must be ≥ this
+   *  - minPerItemRelevance: every item in top-N must score ≥ this (optional floor)
+   */
+  judge?: {
+    n: number;
+    minMeanRelevance: number;
+    minPerItemRelevance?: number;
+  };
+
+  /**
+   * Determinism check: run the same case `runs` times sequentially.
+   * Top-N result IDs (post-rerank, post-filter) must be IDENTICAL each run.
+   * Catches cache races, rerank flakiness, or any nondeterminism the user
+   * would experience as "the ranking changes when I refresh".
+   */
+  stableTopN?: {
+    n: number;
+    runs: number;
+  };
 }
 
 export interface GoldenCase {

@@ -2,6 +2,7 @@ import type { ExaResult, RerankItem } from "@/types/job";
 import type { CaseResult, DimensionResult, GoldenCase, SeniorityTarget } from "./types";
 import { extractCompany } from "@/lib/company";
 import { expandCitySynonyms } from "@/lib/city-synonyms";
+import type { JudgeRow } from "./judge";
 
 const SENIOR_RX = /\b(senior|staff|principal|lead|director|vp|head of)\b/i;
 
@@ -36,6 +37,22 @@ function shortLabel(r: ExaResult, maxLen = 70): string {
   return t.length > maxLen ? `${t.slice(0, maxLen)}…` : t;
 }
 
+function pickWorstDim(j: JudgeRow): { name: string; score: number; evidence: string } {
+  const dims: Array<{ name: string; score: number; evidence: string }> = [
+    { name: "role", score: j.role_match.score, evidence: j.role_match.evidence },
+    { name: "seniority", score: j.seniority_match.score, evidence: j.seniority_match.evidence },
+    { name: "location", score: j.location_match.score, evidence: j.location_match.evidence },
+    { name: "skills", score: j.skills_match.score, evidence: j.skills_match.evidence },
+    { name: "exclusions", score: j.exclusions_clean.score, evidence: j.exclusions_clean.evidence },
+  ];
+  return dims.reduce((min, d) => (d.score < min.score ? d : min), dims[0]);
+}
+
+export interface ScoreOptions {
+  /** When true, skip checks that depend on real rerank ordering. */
+  cheap?: boolean;
+}
+
 export function scoreCase(
   c: GoldenCase,
   exaResults: ExaResult[],
@@ -43,6 +60,8 @@ export function scoreCase(
   durationMs: number,
   tokens?: number,
   costUsd?: number,
+  judgeRows?: JudgeRow[],
+  opts: ScoreOptions = {},
 ): CaseResult {
   const failures: string[] = [];
   const dimensions: DimensionResult[] = [];
@@ -58,8 +77,18 @@ export function scoreCase(
     if (!d.passed) failures.push(`${d.name}: ${d.detail ?? "failed"}`);
   };
 
+  // In --cheap, rerank is synthetic (0.8/0.4 split, no ordering) so checks
+  // that read top-N of the *reranked* slice would be meaningless. Skip them
+  // and record the skip so the reporter is honest about coverage.
+  const skipRerankDependent = (name: string, why: string) => {
+    dimensions.push({ name, passed: true, detail: `skipped (${why})` });
+  };
+  const CHEAP_SKIP_REASON = "cheap: rerank is synthetic";
+
   // ── topNMustMatch ────────────────────────────────────────────────────
-  if (exp.topNMustMatch) {
+  if (exp.topNMustMatch && opts.cheap) {
+    skipRerankDependent("title.topN", CHEAP_SKIP_REASON);
+  } else if (exp.topNMustMatch) {
     const { n, minScore, titleContainsAny } = exp.topNMustMatch;
     const slice = rows.slice(0, n);
     const titleRxs = titleContainsAny.map((p) => new RegExp(p, "i"));
@@ -80,7 +109,9 @@ export function scoreCase(
   }
 
   // ── topResultMinScore ────────────────────────────────────────────────
-  if (exp.topResultMinScore !== undefined) {
+  if (exp.topResultMinScore !== undefined && opts.cheap) {
+    skipRerankDependent("rerank.topScore", CHEAP_SKIP_REASON);
+  } else if (exp.topResultMinScore !== undefined) {
     const top = rows[0];
     const ok = !!top && top.score >= exp.topResultMinScore;
     record({
@@ -117,7 +148,9 @@ export function scoreCase(
   }
 
   // ── noSeniorRoles ────────────────────────────────────────────────────
-  if (exp.noSeniorRoles) {
+  if (exp.noSeniorRoles && opts.cheap) {
+    skipRerankDependent("title.noSenior", CHEAP_SKIP_REASON);
+  } else if (exp.noSeniorRoles) {
     const top5 = rows.slice(0, 5);
     const senior = top5.filter((r) => SENIOR_RX.test(r.result.title ?? ""));
     record({
@@ -130,7 +163,9 @@ export function scoreCase(
   }
 
   // ── bodyMustMention ──────────────────────────────────────────────────
-  if (exp.bodyMustMention) {
+  if (exp.bodyMustMention && opts.cheap) {
+    skipRerankDependent("body.skillsGrounded", CHEAP_SKIP_REASON);
+  } else if (exp.bodyMustMention) {
     const { n, anyOf, minHitRate = 0.6 } = exp.bodyMustMention;
     const slice = rows.slice(0, n);
     const groupRxs = anyOf.map((alts) => alts.map((a) => new RegExp(`\\b${escapeRx(a)}\\b`, "i")));
@@ -167,7 +202,9 @@ export function scoreCase(
   }
 
   // ── locationMustGround ───────────────────────────────────────────────
-  if (exp.locationMustGround) {
+  if (exp.locationMustGround && opts.cheap) {
+    skipRerankDependent("body.locationGrounded", CHEAP_SKIP_REASON);
+  } else if (exp.locationMustGround) {
     const { n = 5, city, remote, minHitRate = 0.6 } = exp.locationMustGround;
     const slice = rows.slice(0, n);
     const cityRxs: RegExp[] = (city ?? []).flatMap((c) =>
@@ -193,7 +230,9 @@ export function scoreCase(
   }
 
   // ── seniorityMustGround ──────────────────────────────────────────────
-  if (exp.seniorityMustGround) {
+  if (exp.seniorityMustGround && opts.cheap) {
+    skipRerankDependent("body.seniorityGrounded", CHEAP_SKIP_REASON);
+  } else if (exp.seniorityMustGround) {
     const { n = 5, target, minHitRate = 0.6 } = exp.seniorityMustGround;
     const rx = SENIORITY_PATTERNS[target];
     const slice = rows.slice(0, n);
@@ -229,6 +268,57 @@ export function scoreCase(
       passed: offenders.length === 0,
       detail: offenders.length === 0 ? "clean" : `${offenders.length} marketing/meta URLs`,
       offenders: offenders.slice(0, 3).map((r) => shortLabel(r)),
+    });
+  }
+
+  // ── judge (LLM) ──────────────────────────────────────────────────────
+  if (exp.judge && judgeRows && judgeRows.length > 0) {
+    const { n, minMeanRelevance, minPerItemRelevance } = exp.judge;
+    const slice = judgeRows.slice(0, n);
+    const overalls = slice.map((j) => j.overall.score);
+    const mean = overalls.reduce((s, x) => s + x, 0) / overalls.length;
+    const min = Math.min(...overalls);
+
+    const meanOk = mean >= minMeanRelevance;
+    const idxByMean = slice
+      .filter((j) => j.overall.score < minMeanRelevance)
+      .slice(0, 3)
+      .map((j) => {
+        const item = exaResults[j.idx];
+        return `${shortLabel(item)} — overall=${j.overall.score.toFixed(2)} (${j.overall.why.slice(0, 60)})`;
+      });
+    record({
+      name: "judge.meanRelevance",
+      passed: meanOk,
+      hitRate: mean,
+      detail: `mean=${mean.toFixed(2)} across top-${slice.length} (need ≥${minMeanRelevance})`,
+      offenders: idxByMean,
+    });
+
+    if (minPerItemRelevance !== undefined) {
+      const floorOk = min >= minPerItemRelevance;
+      const floorOffenders = slice
+        .filter((j) => j.overall.score < minPerItemRelevance)
+        .slice(0, 3)
+        .map((j) => {
+          const item = exaResults[j.idx];
+          const worst = pickWorstDim(j);
+          return `${shortLabel(item)} — ${worst.name}=${worst.score.toFixed(2)} "${worst.evidence.slice(0, 60)}"`;
+        });
+      record({
+        name: "judge.minPerItem",
+        passed: floorOk,
+        detail: `min=${min.toFixed(2)} (need ≥${minPerItemRelevance})`,
+        offenders: floorOffenders,
+      });
+    }
+  } else if (exp.judge && (!judgeRows || judgeRows.length === 0)) {
+    // Judge requested but skipped (e.g. --cheap). Mark as a non-failing
+    // informational dimension so the reporter shows it but pass-rate isn't penalized.
+    dimensions.push({
+      name: "judge.skipped",
+      passed: true,
+      detail: "judge skipped (cheap mode or no rerank results)",
     });
   }
 

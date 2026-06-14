@@ -78,6 +78,7 @@ export type EvalRunCountAggregateOutputType = {
   score: number
   passed: number
   failures: number
+  dimensions: number
   durationMs: number
   tokens: number
   costUsd: number
@@ -140,6 +141,7 @@ export type EvalRunCountAggregateInputType = {
   score?: true
   passed?: true
   failures?: true
+  dimensions?: true
   durationMs?: true
   tokens?: true
   costUsd?: true
@@ -243,6 +245,7 @@ export type EvalRunGroupByOutputType = {
   score: number
   passed: boolean
   failures: runtime.JsonValue
+  dimensions: runtime.JsonValue
   durationMs: number
   tokens: number | null
   costUsd: number | null
@@ -282,6 +285,7 @@ export type EvalRunWhereInput = {
   score?: Prisma.FloatFilter<"EvalRun"> | number
   passed?: Prisma.BoolFilter<"EvalRun"> | boolean
   failures?: Prisma.JsonFilter<"EvalRun">
+  dimensions?: Prisma.JsonFilter<"EvalRun">
   durationMs?: Prisma.IntFilter<"EvalRun"> | number
   tokens?: Prisma.IntNullableFilter<"EvalRun"> | number | null
   costUsd?: Prisma.FloatNullableFilter<"EvalRun"> | number | null
@@ -298,6 +302,7 @@ export type EvalRunOrderByWithRelationInput = {
   score?: Prisma.SortOrder
   passed?: Prisma.SortOrder
   failures?: Prisma.SortOrder
+  dimensions?: Prisma.SortOrder
   durationMs?: Prisma.SortOrder
   tokens?: Prisma.SortOrderInput | Prisma.SortOrder
   costUsd?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -317,6 +322,7 @@ export type EvalRunWhereUniqueInput = Prisma.AtLeast<{
   score?: Prisma.FloatFilter<"EvalRun"> | number
   passed?: Prisma.BoolFilter<"EvalRun"> | boolean
   failures?: Prisma.JsonFilter<"EvalRun">
+  dimensions?: Prisma.JsonFilter<"EvalRun">
   durationMs?: Prisma.IntFilter<"EvalRun"> | number
   tokens?: Prisma.IntNullableFilter<"EvalRun"> | number | null
   costUsd?: Prisma.FloatNullableFilter<"EvalRun"> | number | null
@@ -333,6 +339,7 @@ export type EvalRunOrderByWithAggregationInput = {
   score?: Prisma.SortOrder
   passed?: Prisma.SortOrder
   failures?: Prisma.SortOrder
+  dimensions?: Prisma.SortOrder
   durationMs?: Prisma.SortOrder
   tokens?: Prisma.SortOrderInput | Prisma.SortOrder
   costUsd?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -357,6 +364,7 @@ export type EvalRunScalarWhereWithAggregatesInput = {
   score?: Prisma.FloatWithAggregatesFilter<"EvalRun"> | number
   passed?: Prisma.BoolWithAggregatesFilter<"EvalRun"> | boolean
   failures?: Prisma.JsonWithAggregatesFilter<"EvalRun">
+  dimensions?: Prisma.JsonWithAggregatesFilter<"EvalRun">
   durationMs?: Prisma.IntWithAggregatesFilter<"EvalRun"> | number
   tokens?: Prisma.IntNullableWithAggregatesFilter<"EvalRun"> | number | null
   costUsd?: Prisma.FloatNullableWithAggregatesFilter<"EvalRun"> | number | null
@@ -373,6 +381,7 @@ export type EvalRunCreateInput = {
   score: number
   passed: boolean
   failures?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  dimensions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   durationMs: number
   tokens?: number | null
   costUsd?: number | null
@@ -389,6 +398,7 @@ export type EvalRunUncheckedCreateInput = {
   score: number
   passed: boolean
   failures?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  dimensions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   durationMs: number
   tokens?: number | null
   costUsd?: number | null
@@ -405,6 +415,7 @@ export type EvalRunUpdateInput = {
   score?: Prisma.FloatFieldUpdateOperationsInput | number
   passed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   failures?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  dimensions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   durationMs?: Prisma.IntFieldUpdateOperationsInput | number
   tokens?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   costUsd?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -421,6 +432,7 @@ export type EvalRunUncheckedUpdateInput = {
   score?: Prisma.FloatFieldUpdateOperationsInput | number
   passed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   failures?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  dimensions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   durationMs?: Prisma.IntFieldUpdateOperationsInput | number
   tokens?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   costUsd?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -437,6 +449,7 @@ export type EvalRunCreateManyInput = {
   score: number
   passed: boolean
   failures?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  dimensions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   durationMs: number
   tokens?: number | null
   costUsd?: number | null
@@ -453,6 +466,7 @@ export type EvalRunUpdateManyMutationInput = {
   score?: Prisma.FloatFieldUpdateOperationsInput | number
   passed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   failures?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  dimensions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   durationMs?: Prisma.IntFieldUpdateOperationsInput | number
   tokens?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   costUsd?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -469,6 +483,7 @@ export type EvalRunUncheckedUpdateManyInput = {
   score?: Prisma.FloatFieldUpdateOperationsInput | number
   passed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   failures?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  dimensions?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   durationMs?: Prisma.IntFieldUpdateOperationsInput | number
   tokens?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   costUsd?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -485,6 +500,7 @@ export type EvalRunCountOrderByAggregateInput = {
   score?: Prisma.SortOrder
   passed?: Prisma.SortOrder
   failures?: Prisma.SortOrder
+  dimensions?: Prisma.SortOrder
   durationMs?: Prisma.SortOrder
   tokens?: Prisma.SortOrder
   costUsd?: Prisma.SortOrder
@@ -559,6 +575,7 @@ export type EvalRunSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   score?: boolean
   passed?: boolean
   failures?: boolean
+  dimensions?: boolean
   durationMs?: boolean
   tokens?: boolean
   costUsd?: boolean
@@ -575,6 +592,7 @@ export type EvalRunSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   score?: boolean
   passed?: boolean
   failures?: boolean
+  dimensions?: boolean
   durationMs?: boolean
   tokens?: boolean
   costUsd?: boolean
@@ -591,6 +609,7 @@ export type EvalRunSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   score?: boolean
   passed?: boolean
   failures?: boolean
+  dimensions?: boolean
   durationMs?: boolean
   tokens?: boolean
   costUsd?: boolean
@@ -607,6 +626,7 @@ export type EvalRunSelectScalar = {
   score?: boolean
   passed?: boolean
   failures?: boolean
+  dimensions?: boolean
   durationMs?: boolean
   tokens?: boolean
   costUsd?: boolean
@@ -615,7 +635,7 @@ export type EvalRunSelectScalar = {
   createdAt?: boolean
 }
 
-export type EvalRunOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "runId" | "caseName" | "query" | "score" | "passed" | "failures" | "durationMs" | "tokens" | "costUsd" | "rubric" | "notes" | "createdAt", ExtArgs["result"]["evalRun"]>
+export type EvalRunOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "runId" | "caseName" | "query" | "score" | "passed" | "failures" | "dimensions" | "durationMs" | "tokens" | "costUsd" | "rubric" | "notes" | "createdAt", ExtArgs["result"]["evalRun"]>
 
 export type $EvalRunPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "EvalRun"
@@ -628,6 +648,7 @@ export type $EvalRunPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     score: number
     passed: boolean
     failures: runtime.JsonValue
+    dimensions: runtime.JsonValue
     durationMs: number
     tokens: number | null
     costUsd: number | null
@@ -1064,6 +1085,7 @@ export interface EvalRunFieldRefs {
   readonly score: Prisma.FieldRef<"EvalRun", 'Float'>
   readonly passed: Prisma.FieldRef<"EvalRun", 'Boolean'>
   readonly failures: Prisma.FieldRef<"EvalRun", 'Json'>
+  readonly dimensions: Prisma.FieldRef<"EvalRun", 'Json'>
   readonly durationMs: Prisma.FieldRef<"EvalRun", 'Int'>
   readonly tokens: Prisma.FieldRef<"EvalRun", 'Int'>
   readonly costUsd: Prisma.FieldRef<"EvalRun", 'Float'>
