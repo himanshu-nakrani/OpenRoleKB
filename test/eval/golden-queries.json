@@ -241,5 +241,98 @@
     "expectations": {
       "topResultMinScore": 0.4
     }
+  },
+  {
+    "name": "body-skills-airflow-grounded",
+    "query": "data engineer with python and airflow, remote India",
+    "expectations": {
+      "bodyMustMention": {
+        "n": 5,
+        "anyOf": [
+          ["python", "py"],
+          ["airflow", "mwaa", "cloud composer"]
+        ],
+        "minHitRate": 0.5
+      }
+    }
+  },
+  {
+    "name": "body-location-grounded-bangalore",
+    "query": "backend engineer in Bangalore",
+    "expectations": {
+      "locationMustGround": {
+        "n": 5,
+        "city": ["bangalore"],
+        "minHitRate": 0.6
+      }
+    }
+  },
+  {
+    "name": "body-seniority-grounded-junior-pm",
+    "query": "junior product manager in Bangalore",
+    "expectations": {
+      "seniorityMustGround": {
+        "n": 5,
+        "target": "junior",
+        "minHitRate": 0.5
+      },
+      "locationMustGround": {
+        "n": 5,
+        "city": ["bangalore"],
+        "minHitRate": 0.6
+      }
+    }
+  },
+  {
+    "name": "body-exclusions-no-crypto-fintech",
+    "query": "fintech backend engineer, no crypto or web3",
+    "expectations": {
+      "bodyMustNotMention": ["blockchain", "web3", "nft", "defi"]
+    }
+  },
+  {
+    "name": "negation-react-not-react-native",
+    "query": "react developer, not React Native",
+    "expectations": {
+      "bodyMustNotMention": ["react native"],
+      "topNMustMatch": {
+        "n": 5,
+        "minScore": 0.5,
+        "titleContainsAny": ["react", "frontend", "front[- ]end"]
+      }
+    }
+  },
+  {
+    "name": "garbage-query-empty-state",
+    "query": "asfdkjghasdkjgh xyzpdq nonsense",
+    "expectations": {
+      "expectNoResults": true,
+      "expectNoMetaPages": true
+    }
+  },
+  {
+    "name": "no-meta-pages-thin-corpus",
+    "query": "blockchain rust engineer Antarctica",
+    "expectations": {
+      "expectNoMetaPages": true
+    }
+  },
+  {
+    "name": "yoe-grounded-hyderabad-3-years",
+    "query": "ai engineer hyderabad 3 years experience",
+    "expectations": {
+      "locationMustGround": {
+        "n": 3,
+        "city": ["hyderabad"],
+        "minHitRate": 0.5
+      },
+      "bodyMustMention": {
+        "n": 3,
+        "anyOf": [
+          ["ai", "ml", "machine learning", "artificial intelligence"]
+        ],
+        "minHitRate": 0.6
+      }
+    }
   }
 ]

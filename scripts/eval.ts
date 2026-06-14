@@ -21,8 +21,9 @@ import { parseQuery } from "@/lib/parse-query";
 import { searchJobs } from "@/lib/exa";
 import { searchLocalJobs } from "@/lib/local-search";
 import { rerankWithMetrics } from "@/lib/rerank";
+import { filterResults } from "@/lib/retrieval-quality";
 import { LAYER_A_FALLBACK_THRESHOLD, LOCAL_SEARCH_MAX_RESULTS } from "@/lib/config";
-import { dedupeSearchResults } from "@/app/api/search/route";
+import { dedupeSearchResults, applySeniorityFilter, applyExclusionFilter } from "@/app/api/search/route";
 import { prisma } from "@/lib/prisma";
 import { hasSnapshot, loadSnapshot, writeSnapshot } from "../test/eval/snapshot-cache";
 import { scoreCase } from "../test/eval/score";
@@ -45,7 +46,9 @@ const GEMINI_USD_PER_1K_TOKENS = 0.0014;
 
 async function exaForCase(c: GoldenCase, filters: Filters): Promise<ExaResult[]> {
   if (DRY_RUN || (!REFRESH && hasSnapshot(c.query))) {
-    return loadSnapshot(c.query);
+    // Re-apply current quality filter to snapshots — denylist evolves and a
+    // stale snapshot must not bypass production filtering.
+    return filterResults(loadSnapshot(c.query)).kept;
   }
   console.error(`  [exa] fetching live for "${c.query}"`);
   const results = await searchJobs(c.query, filters);
@@ -76,14 +79,19 @@ function syntheticRerank(exa: ExaResult[]): { items: RerankItem[]; tokens?: numb
 
 async function runCase(c: GoldenCase): Promise<CaseResult> {
   const t0 = Date.now();
+  const parsed = await parseQuery(c.query);
   const exa = await candidatesForCase(c);
   const r = DRY_RUN
     ? syntheticRerank(exa)
     : await rerankWithMetrics(c.query, exa);
+  // Mirror the production post-filters so the eval grades what users actually see.
+  let items = r.items;
+  items = applySeniorityFilter(items, exa, parsed.filters);
+  items = applyExclusionFilter(items, exa, parsed.filters);
   const durationMs = Date.now() - t0;
   const tokens = r.tokens;
   const costUsd = tokens != null ? (tokens / 1000) * GEMINI_USD_PER_1K_TOKENS : undefined;
-  return scoreCase(c, exa, r.items, durationMs, tokens, costUsd);
+  return scoreCase(c, exa, items, durationMs, tokens, costUsd);
 }
 
 async function main() {
@@ -108,8 +116,13 @@ async function main() {
       const r = await runCase(c);
       results.push(r);
       console.error(`${r.passed ? "✓" : "✗"} score=${r.score.toFixed(2)} ${r.durationMs}ms ${r.tokens != null ? `${r.tokens}tok` : ""}`);
-      if (!r.passed) {
-        for (const f of r.failures) console.error(`      · ${f}`);
+      for (const d of r.dimensions ?? []) {
+        const mark = d.passed ? "✓" : "✗";
+        const rate = d.hitRate != null ? ` (${(d.hitRate * 100).toFixed(0)}%)` : "";
+        console.error(`      ${mark} ${d.name}${rate} — ${d.detail ?? ""}`);
+        if (!d.passed) {
+          for (const o of d.offenders ?? []) console.error(`          · ${o}`);
+        }
       }
     } catch (err) {
       console.error(`crashed: ${err instanceof Error ? err.message : String(err)}`);

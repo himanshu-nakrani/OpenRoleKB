@@ -1,8 +1,40 @@
 import type { ExaResult, RerankItem } from "@/types/job";
-import type { CaseResult, GoldenCase } from "./types";
+import type { CaseResult, DimensionResult, GoldenCase, SeniorityTarget } from "./types";
 import { extractCompany } from "@/lib/company";
+import { expandCitySynonyms } from "@/lib/city-synonyms";
 
 const SENIOR_RX = /\b(senior|staff|principal|lead|director|vp|head of)\b/i;
+
+const SENIORITY_PATTERNS: Record<SeniorityTarget, RegExp> = {
+  junior: /\b(jr\.?|junior|associate|entry[- ]level|new[- ]grad|graduate|intern|trainee|level\s*1|l1|i\b|0[-\s]?[12]\s*(?:years?|yrs?))\b/i,
+  mid: /\b(mid[- ]level|ii\b|level\s*2|l2|2[-\s]?[345]\s*(?:years?|yrs?)|3\+\s*(?:years?|yrs?))\b/i,
+  senior: /\b(sr\.?|senior|iii\b|level\s*3|l3|5\+\s*(?:years?|yrs?)|6\+\s*(?:years?|yrs?)|7\+\s*(?:years?|yrs?))\b/i,
+  staff: /\b(staff|iv\b|level\s*4|l4|8\+\s*(?:years?|yrs?)|10\+\s*(?:years?|yrs?))\b/i,
+  principal: /\b(principal|distinguished|fellow|level\s*5|l5|10\+\s*(?:years?|yrs?)|12\+\s*(?:years?|yrs?))\b/i,
+};
+
+const REMOTE_RX = /\b(remote|work[- ]from[- ]home|wfh|anywhere|distributed|fully[- ]remote)\b/i;
+
+// ATS marketing / non-job pages that occasionally leak past the live denylist.
+const META_PAGE_RX =
+  /(\/talent-trends|\/blog\/|\/blogs\/|\/webinar|\/on-demand\/|\/reports?\/|\/case-studies?\/|\/about(?:-us)?|\/leadership|\/contact|\/press)/i;
+
+function escapeRx(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function bodyOf(r: ExaResult): string {
+  return `${r.title ?? ""}\n${r.text ?? ""}\n${r.location ?? ""}`;
+}
+
+function rateOf(passing: number, checked: number): number {
+  return checked === 0 ? 0 : passing / checked;
+}
+
+function shortLabel(r: ExaResult, maxLen = 70): string {
+  const t = (r.title || r.url || "(untitled)").trim();
+  return t.length > maxLen ? `${t.slice(0, maxLen)}…` : t;
+}
 
 export function scoreCase(
   c: GoldenCase,
@@ -13,96 +45,202 @@ export function scoreCase(
   costUsd?: number,
 ): CaseResult {
   const failures: string[] = [];
-  let checks = 0;
-  let passed = 0;
+  const dimensions: DimensionResult[] = [];
 
-  // Reranked rows are sorted highest-score first; map to ExaResult for inspection.
   const rows = reranked
     .map((r) => ({ ...r, result: exaResults[r.idx] }))
     .filter((r) => r.result !== undefined);
 
   const exp = c.expectations;
 
+  const record = (d: DimensionResult) => {
+    dimensions.push(d);
+    if (!d.passed) failures.push(`${d.name}: ${d.detail ?? "failed"}`);
+  };
+
   // ── topNMustMatch ────────────────────────────────────────────────────
   if (exp.topNMustMatch) {
     const { n, minScore, titleContainsAny } = exp.topNMustMatch;
     const slice = rows.slice(0, n);
     const titleRxs = titleContainsAny.map((p) => new RegExp(p, "i"));
-    const matchedCount = slice.filter(
-      (r) => r.score >= minScore && titleRxs.some((rx) => rx.test(r.result.title)),
-    ).length;
-    checks++;
-    // Pass if at least floor(n/2) of the top N match — we tolerate some noise.
+    const matched = slice.filter(
+      (r) => r.score >= minScore && titleRxs.some((rx) => rx.test(r.result.title ?? "")),
+    );
     const threshold = Math.max(1, Math.floor(n / 2));
-    if (matchedCount >= threshold) {
-      passed++;
-    } else {
-      failures.push(
-        `topNMustMatch: only ${matchedCount}/${n} of top-${n} results scored ≥${minScore} AND matched a title pattern (need ≥${threshold})`,
-      );
-    }
+    record({
+      name: "title.topN",
+      passed: matched.length >= threshold,
+      hitRate: rateOf(matched.length, slice.length),
+      detail: `${matched.length}/${slice.length} top-${n} matched (need ≥${threshold}, score≥${minScore})`,
+      offenders: slice
+        .filter((r) => !matched.includes(r))
+        .slice(0, 3)
+        .map((r) => `${shortLabel(r.result)} (score=${r.score.toFixed(2)})`),
+    });
   }
 
   // ── topResultMinScore ────────────────────────────────────────────────
   if (exp.topResultMinScore !== undefined) {
-    checks++;
     const top = rows[0];
-    if (top && top.score >= exp.topResultMinScore) {
-      passed++;
-    } else {
-      failures.push(
-        `topResultMinScore: top result scored ${top?.score?.toFixed(2) ?? "(none)"} < ${exp.topResultMinScore}`,
-      );
-    }
+    const ok = !!top && top.score >= exp.topResultMinScore;
+    record({
+      name: "rerank.topScore",
+      passed: ok,
+      detail: `top=${top?.score?.toFixed(2) ?? "(none)"} need≥${exp.topResultMinScore}`,
+    });
   }
 
   // ── mustExcludeCompanies ─────────────────────────────────────────────
   if (exp.mustExcludeCompanies?.length) {
-    checks++;
     const banned = new Set(exp.mustExcludeCompanies.map((c) => c.toLowerCase()));
     const offenders = rows
-      .map((r) => extractCompany(r.result.url)?.toLowerCase())
-      .filter((c): c is string => Boolean(c))
-      .filter((c) => banned.has(c));
-    if (offenders.length === 0) {
-      passed++;
-    } else {
-      failures.push(`mustExcludeCompanies: banned companies appeared: ${[...new Set(offenders)].join(", ")}`);
-    }
+      .map((r) => ({ row: r, company: extractCompany(r.result.url)?.toLowerCase() }))
+      .filter((x) => x.company && banned.has(x.company));
+    record({
+      name: "exclusions.byCompany",
+      passed: offenders.length === 0,
+      detail: offenders.length === 0 ? "clean" : `${offenders.length} banned`,
+      offenders: offenders.slice(0, 3).map((o) => `${o.company}: ${shortLabel(o.row.result)}`),
+    });
   }
 
   // ── mustExcludeKeywordsInTitle ───────────────────────────────────────
   if (exp.mustExcludeKeywordsInTitle?.length) {
-    checks++;
     const banned = exp.mustExcludeKeywordsInTitle.map((p) => new RegExp(p, "i"));
-    const offenders = rows.filter((r) => banned.some((rx) => rx.test(r.result.title)));
-    if (offenders.length === 0) {
-      passed++;
-    } else {
-      failures.push(
-        `mustExcludeKeywordsInTitle: banned keywords appeared in: ${offenders.slice(0, 3).map((o) => o.result.title).join(" | ")}`,
-      );
-    }
+    const offenders = rows.filter((r) => banned.some((rx) => rx.test(r.result.title ?? "")));
+    record({
+      name: "exclusions.byTitle",
+      passed: offenders.length === 0,
+      detail: offenders.length === 0 ? "clean" : `${offenders.length} hits`,
+      offenders: offenders.slice(0, 3).map((r) => shortLabel(r.result)),
+    });
   }
 
   // ── noSeniorRoles ────────────────────────────────────────────────────
   if (exp.noSeniorRoles) {
-    checks++;
     const top5 = rows.slice(0, 5);
-    const senior = top5.filter((r) => SENIOR_RX.test(r.result.title));
-    if (senior.length <= 1) {
-      passed++;
-    } else {
-      failures.push(`noSeniorRoles: ${senior.length} senior-titled roles in top 5`);
-    }
+    const senior = top5.filter((r) => SENIOR_RX.test(r.result.title ?? ""));
+    record({
+      name: "title.noSenior",
+      passed: senior.length <= 1,
+      hitRate: rateOf(top5.length - senior.length, top5.length),
+      detail: `${senior.length} senior-titled in top 5`,
+      offenders: senior.slice(0, 3).map((r) => shortLabel(r.result)),
+    });
   }
 
+  // ── bodyMustMention ──────────────────────────────────────────────────
+  if (exp.bodyMustMention) {
+    const { n, anyOf, minHitRate = 0.6 } = exp.bodyMustMention;
+    const slice = rows.slice(0, n);
+    const groupRxs = anyOf.map((alts) => alts.map((a) => new RegExp(`\\b${escapeRx(a)}\\b`, "i")));
+    const passing = slice.filter((r) => {
+      const body = bodyOf(r.result);
+      return groupRxs.every((alts) => alts.some((rx) => rx.test(body)));
+    });
+    const rate = rateOf(passing.length, slice.length);
+    record({
+      name: "body.skillsGrounded",
+      passed: rate >= minHitRate && slice.length > 0,
+      hitRate: rate,
+      detail: `${passing.length}/${slice.length} mention all required skill groups (need ≥${(minHitRate * 100).toFixed(0)}%)`,
+      offenders: slice
+        .filter((r) => !passing.includes(r))
+        .slice(0, 3)
+        .map((r) => shortLabel(r.result)),
+    });
+  }
+
+  // ── bodyMustNotMention ───────────────────────────────────────────────
+  if (exp.bodyMustNotMention?.length) {
+    const banned = exp.bodyMustNotMention.map((p) => new RegExp(`\\b${escapeRx(p)}\\b`, "i"));
+    const offenders = rows.filter((r) => {
+      const body = bodyOf(r.result);
+      return banned.some((rx) => rx.test(body));
+    });
+    record({
+      name: "body.exclusions",
+      passed: offenders.length === 0,
+      detail: offenders.length === 0 ? "clean" : `${offenders.length} hits in bodies`,
+      offenders: offenders.slice(0, 3).map((r) => shortLabel(r.result)),
+    });
+  }
+
+  // ── locationMustGround ───────────────────────────────────────────────
+  if (exp.locationMustGround) {
+    const { n = 5, city, remote, minHitRate = 0.6 } = exp.locationMustGround;
+    const slice = rows.slice(0, n);
+    const cityRxs: RegExp[] = (city ?? []).flatMap((c) =>
+      expandCitySynonyms(c).map((syn) => new RegExp(`\\b${escapeRx(syn)}\\b`, "i")),
+    );
+    const passing = slice.filter((r) => {
+      const body = bodyOf(r.result);
+      const cityOk = cityRxs.length === 0 || cityRxs.some((rx) => rx.test(body));
+      const remoteOk = remote === undefined ? true : (remote ? REMOTE_RX.test(body) : true);
+      return cityOk && remoteOk;
+    });
+    const rate = rateOf(passing.length, slice.length);
+    record({
+      name: "body.locationGrounded",
+      passed: rate >= minHitRate && slice.length > 0,
+      hitRate: rate,
+      detail: `${passing.length}/${slice.length} bodies match location signal (need ≥${(minHitRate * 100).toFixed(0)}%)`,
+      offenders: slice
+        .filter((r) => !passing.includes(r))
+        .slice(0, 3)
+        .map((r) => shortLabel(r.result)),
+    });
+  }
+
+  // ── seniorityMustGround ──────────────────────────────────────────────
+  if (exp.seniorityMustGround) {
+    const { n = 5, target, minHitRate = 0.6 } = exp.seniorityMustGround;
+    const rx = SENIORITY_PATTERNS[target];
+    const slice = rows.slice(0, n);
+    const passing = slice.filter((r) => rx.test(bodyOf(r.result)));
+    const rate = rateOf(passing.length, slice.length);
+    record({
+      name: "body.seniorityGrounded",
+      passed: rate >= minHitRate && slice.length > 0,
+      hitRate: rate,
+      detail: `${passing.length}/${slice.length} bodies show "${target}" signal (need ≥${(minHitRate * 100).toFixed(0)}%)`,
+      offenders: slice
+        .filter((r) => !passing.includes(r))
+        .slice(0, 3)
+        .map((r) => shortLabel(r.result)),
+    });
+  }
+
+  // ── expectNoResults ──────────────────────────────────────────────────
+  if (exp.expectNoResults) {
+    record({
+      name: "system.noResults",
+      passed: rows.length === 0,
+      detail: rows.length === 0 ? "rerank empty" : `${rows.length} results returned`,
+      offenders: rows.slice(0, 3).map((r) => shortLabel(r.result)),
+    });
+  }
+
+  // ── expectNoMetaPages ────────────────────────────────────────────────
+  if (exp.expectNoMetaPages) {
+    const offenders = exaResults.filter((r) => META_PAGE_RX.test(r.url ?? ""));
+    record({
+      name: "system.noMetaPages",
+      passed: offenders.length === 0,
+      detail: offenders.length === 0 ? "clean" : `${offenders.length} marketing/meta URLs`,
+      offenders: offenders.slice(0, 3).map((r) => shortLabel(r)),
+    });
+  }
+
+  const checks = dimensions.length;
+  const passed = dimensions.filter((d) => d.passed).length;
   const score = checks === 0 ? 1 : passed / checks;
   return {
     case: c,
     passed: failures.length === 0,
     score,
     failures,
+    dimensions,
     durationMs,
     tokens,
     costUsd,
