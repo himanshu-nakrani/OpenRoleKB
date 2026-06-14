@@ -62,7 +62,39 @@ const DENY_PATH_FRAGMENTS = [
   "/integrations/",
   "/partners/",
   "/case-stud",  // matches /case-studies/, /case-study/
+  // 2026-06-15: ATS-vendor marketing reports/webinars that leaked past previous filters.
+  "/talent-trends-report",
+  "/talent-trends",
+  "/hr-virtual/",
+  "/on-demand/",
+  "/content-hub/",
+  "/cab-conversations",
 ];
+
+// ATS-vendor marketing hosts. These hosts serve company-wide marketing content,
+// NOT individual job postings — real postings live on subdomain hosts
+// (jobs.ashbyhq.com, apply.workable.com, <tenant>.bamboohr.com, etc.).
+// Anything fetched from these hosts at the marketing root is non-job content.
+const VENDOR_MARKETING_HOSTS = new Set([
+  "www.ashbyhq.com",
+  "ashbyhq.com",
+  "www.bamboohr.com",
+  "bamboohr.com",
+  "www.lever.co",
+  "lever.co",
+  "www.greenhouse.io",
+  "greenhouse.io",
+  "www.smartrecruiters.com",
+  "smartrecruiters.com",
+  "www.workable.com",
+  "workable.com",
+  "www.teamtailor.com",
+  "teamtailor.com",
+  "www.recruitee.com",
+  "recruitee.com",
+  "www.workday.com",
+  "workday.com",
+]);
 
 // BambooHR and Lever vendor-own careers pages are category/index pages, not
 // individual postings. Real bamboohr tenant postings live on <tenant>.bamboohr.com
@@ -186,6 +218,13 @@ function classifyUrl(rawUrl: string): { urlClass: UrlClass; isAtsHost: boolean }
   const path = stripLocalePrefix(url.pathname);
 
   if (DENY_PATH_FRAGMENTS.some((frag) => path.toLowerCase().includes(frag))) {
+    return { urlClass: "marketing", isAtsHost: false };
+  }
+
+  // ATS-vendor marketing hosts only serve company-wide content, never individual
+  // job postings (those live on subdomains like jobs.ashbyhq.com or
+  // <tenant>.bamboohr.com). Reject the entire host as marketing.
+  if (VENDOR_MARKETING_HOSTS.has(host)) {
     return { urlClass: "marketing", isAtsHost: false };
   }
 

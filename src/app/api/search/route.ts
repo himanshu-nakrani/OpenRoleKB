@@ -98,7 +98,7 @@ export function titleContradictsSeniority(title: string, want: string): boolean 
   return false;
 }
 
-function applySeniorityFilter(
+export function applySeniorityFilter(
   reranked: RerankItem[],
   results: Array<{ title?: string }>,
   filters: Filters,
@@ -107,6 +107,36 @@ function applySeniorityFilter(
   return reranked.filter((r) => {
     const title = results[r.idx]?.title ?? "";
     return !titleContradictsSeniority(title, filters.seniority!);
+  });
+}
+
+function escapeRxToken(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Drop reranked items whose body, title, or company contains any term the
+ * user explicitly excluded ("not crypto", "no React Native"). The parser
+ * extracts these into filters.exclude; without this filter they were
+ * advisory-only and the reranker frequently kept matches that contradicted
+ * the exclusion.
+ */
+export function applyExclusionFilter(
+  reranked: RerankItem[],
+  results: Array<{ title?: string; text?: string; company?: string }>,
+  filters: Filters,
+): RerankItem[] {
+  if (!filters.exclude?.length) return reranked;
+  const rxs = filters.exclude
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 2)
+    .map((s) => new RegExp(`\\b${escapeRxToken(s)}\\b`, "i"));
+  if (!rxs.length) return reranked;
+  return reranked.filter((r) => {
+    const item = results[r.idx];
+    if (!item) return true;
+    const haystack = `${item.title ?? ""}\n${item.text ?? ""}\n${item.company ?? ""}`;
+    return !rxs.some((rx) => rx.test(haystack));
   });
 }
 
@@ -249,6 +279,7 @@ export async function POST(request: NextRequest) {
           const hiddenForCache = await hiddenPromise;
           reranked = await applyHiddenCompanies(ownerKey, reranked, cached.jobs, hiddenForCache);
           reranked = applySeniorityFilter(reranked, cached.jobs, filters);
+          reranked = applyExclusionFilter(reranked, cached.jobs, filters);
 
           resultCount = reranked.length;
           send("rerank", reranked);
@@ -307,6 +338,7 @@ export async function POST(request: NextRequest) {
             const hidden = await hiddenPromise;
             items = await applyHiddenCompanies(ownerKey, items, candidates, hidden);
             items = applySeniorityFilter(items, candidates, filters!);
+            items = applyExclusionFilter(items, candidates, filters!);
             return { reranked: items, scores };
           } catch (err) {
             rerankFailed = true;

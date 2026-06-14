@@ -48,6 +48,18 @@ describe("retrieval-quality URL classifier", () => {
     expect(reasons("https://lever.co/careers/account-executive")).toContain("denylist_path");
   });
 
+  it("rejects ATS-vendor marketing hosts and report/webinar paths (2026-06-15 audit)", () => {
+    const reasons = (url: string) => assessResult(r(url)).quality.rejectionReasons;
+    // Whole vendor marketing hosts — never serve individual job postings.
+    expect(reasons("https://www.ashbyhq.com/talent-trends-report/reports/ghost-jobs")).toContain("denylist_path");
+    expect(reasons("https://www.ashbyhq.com/talent-trends-report/reports/startup-hiring")).toContain("denylist_path");
+    expect(reasons("https://www.bamboohr.com/hr-virtual/on-demand/craft-job-posts-with-ai")).toContain("denylist_path");
+    expect(reasons("https://www.lever.co/cab-conversations-what-ta-pros-told-us-and-what-were-doing-next/")).toContain("denylist_path");
+    expect(reasons("https://www.teamtailor.com/en/content-hub/how-knauf-transformed-its-global-recruitment/")).toContain("denylist_path");
+    // Bare vendor marketing host root with arbitrary path also rejected.
+    expect(reasons("https://www.ashbyhq.com/anything-here")).toContain("denylist_path");
+  });
+
   it("classifies real ATS job URLs as individual_job (NEGATIVE: must SURVIVE filter)", () => {
     // Real SmartRecruiters job posting on the customer-facing jobs subdomain
     // (pattern: jobs.smartrecruiters.com/{company}/{numeric_id})
