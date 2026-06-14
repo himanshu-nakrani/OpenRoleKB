@@ -38,16 +38,23 @@ describe("searchLocalJobs", () => {
     expect(mockQueryRaw).not.toHaveBeenCalled();
   });
 
-  it("builds an AND-joined tsquery from role + seniority + skills", async () => {
+  it("builds an AND-joined tsquery from role + skills (seniority excluded — handled by rerank+post-filter)", async () => {
     mockQueryRaw.mockResolvedValue([row()]);
     const out = await searchLocalJobs({
       role: "rust engineer",
       seniority: "senior",
       skills: ["payments", "rust"],
     });
-    expect(out.tsquery).toBe("rust & engineer & senior & payments");
+    expect(out.tsquery).toBe("rust & engineer & payments");
     expect(out.rawHits).toBe(1);
     expect(out.results[0].title).toBe("Senior Rust Engineer");
+  });
+
+  it("does NOT AND seniority into tsquery — a junior PM query stays recall-friendly", async () => {
+    mockQueryRaw.mockResolvedValue([]);
+    const out = await searchLocalJobs({ role: "product manager", seniority: "junior" });
+    expect(out.tsquery).toBe("product & manager");
+    expect(out.tsquery).not.toContain("junior");
   });
 
   it("dedupes tokens so a skill repeated in role doesn't duplicate", async () => {

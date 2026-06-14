@@ -12,11 +12,10 @@ import type { Filters, ExaResult } from "@/types/job";
 function tokensFromQuery(filters: Filters): string[] {
   const parts: string[] = [];
   if (filters.role) parts.push(filters.role);
-  if (filters.seniority) parts.push(filters.seniority);
   if (filters.skills?.length) parts.push(...filters.skills);
-  // Location and remote are post-filtered below — including them in the
-  // tsquery would over-constrain (a "remote" job posting might say
-  // "this role is location-flexible" without ever using the word "remote").
+  // Location, remote, and seniority are post-filtered (or rerank-enforced) —
+  // including them in the AND-FTS over-constrains. E.g. "junior" rarely
+  // appears in a real APM job description, so ANDing it cuts recall to ~0.
   return parts
     .flatMap((p) =>
       p
