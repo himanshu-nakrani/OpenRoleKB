@@ -140,6 +140,32 @@ export function applyExclusionFilter(
   });
 }
 
+/**
+ * Conservative hard filter for remote-only searches.
+ *
+ * Only acts when `filters.remote === true`. Drops items whose title or body
+ * contains an explicit on-site / no-remote signal. Does NOT require positive
+ * remote language — many legitimate remote postings simply name a city.
+ * Regex is intentionally tight to bias toward false-negatives (let some
+ * ambiguous hybrid through) rather than false-positives (kill legit remote).
+ */
+const ON_SITE_SIGNAL_RX =
+  /\b(?:on[\s-]?site\s+only|no[\s-]?remote|must\s+be\s+in[\s-]?office|in[\s-]?office\s+only|\d+\s+days?\s+(?:a\s+week|per\s+week)\s+(?:in[\s-]?office|from\s+(?:a[n]?\s+|the\s+|our\s+)?(?:\w+\s+)?office))\b/i;
+
+export function applyRemoteFilter(
+  reranked: RerankItem[],
+  results: Array<{ title?: string; text?: string }>,
+  filters: Filters,
+): RerankItem[] {
+  if (!filters.remote) return reranked;
+  return reranked.filter((r) => {
+    const item = results[r.idx];
+    if (!item) return true;
+    const haystack = `${item.title ?? ""}\n${item.text ?? ""}`;
+    return !ON_SITE_SIGNAL_RX.test(haystack);
+  });
+}
+
 async function applyHiddenCompanies(
   ownerKey: string | null,
   reranked: RerankItem[],
@@ -280,6 +306,7 @@ export async function POST(request: NextRequest) {
           reranked = await applyHiddenCompanies(ownerKey, reranked, cached.jobs, hiddenForCache);
           reranked = applySeniorityFilter(reranked, cached.jobs, filters);
           reranked = applyExclusionFilter(reranked, cached.jobs, filters);
+          reranked = applyRemoteFilter(reranked, cached.jobs, filters);
 
           resultCount = reranked.length;
           send("rerank", reranked);
@@ -339,6 +366,7 @@ export async function POST(request: NextRequest) {
             items = await applyHiddenCompanies(ownerKey, items, candidates, hidden);
             items = applySeniorityFilter(items, candidates, filters!);
             items = applyExclusionFilter(items, candidates, filters!);
+            items = applyRemoteFilter(items, candidates, filters!);
             return { reranked: items, scores };
           } catch (err) {
             rerankFailed = true;

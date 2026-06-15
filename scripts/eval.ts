@@ -24,7 +24,7 @@ import { searchLocalJobs } from "@/lib/local-search";
 import { rerankWithMetrics } from "@/lib/rerank";
 import { filterResults } from "@/lib/retrieval-quality";
 import { LAYER_A_FALLBACK_THRESHOLD, LOCAL_SEARCH_MAX_RESULTS } from "@/lib/config";
-import { dedupeSearchResults, applySeniorityFilter, applyExclusionFilter } from "@/app/api/search/route";
+import { dedupeSearchResults, applySeniorityFilter, applyExclusionFilter, applyRemoteFilter } from "@/app/api/search/route";
 import { prisma } from "@/lib/prisma";
 import { hasSnapshot, loadSnapshot, writeSnapshot } from "../test/eval/snapshot-cache";
 import { scoreCase } from "../test/eval/score";
@@ -95,6 +95,7 @@ async function executeOnce(c: GoldenCase): Promise<SingleRunOutput> {
   let items = r.items;
   items = applySeniorityFilter(items, exa, parsed.filters);
   items = applyExclusionFilter(items, exa, parsed.filters);
+  items = applyRemoteFilter(items, exa, parsed.filters);
   return { exa, items, rerankTokens: r.tokens };
 }
 
