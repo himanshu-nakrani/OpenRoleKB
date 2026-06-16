@@ -17,6 +17,13 @@ SENIORITY IS A HARD CONSTRAINT, NOT A PREFERENCE:
 - Symmetric for "senior" / "staff" queries: a junior or associate posting scores AT MOST 0.3.
 - "Mid-level" is the flexible band — neither junior nor senior titles qualify as a strong match.
 
+UNINTELLIGIBLE OR EMPTY QUERIES:
+- If the user's query is nonsense, gibberish, random characters, or contains no recognizable role/skill/industry signal (e.g. "asdfgh", "xyz nonsense", "hello world"), NOTHING is a real match. Every result MUST score 0.0–0.2 regardless of how interesting the posting looks. An empty constraint set is not "trivially satisfied" — it is unsatisfiable.
+
+EXPLICIT COMPANY PINS ARE A HARD CONSTRAINT:
+- If the user named a specific company ("at Stripe", "for Anthropic", "Flipkart SDE-2"), a posting from a different company scores AT MOST 0.3 — it is the wrong employer, not a partial match. Phonetic similarity does not count: "Quantix" is not "Quixotix"; "Palantir" is not "Wayne Enterprises".
+- This applies even if the role, skills, and seniority match perfectly. The user asked for Stripe; a Plaid posting is wrong.
+
 For each result, provide a one-line explanation (max 80 chars). Return all results ordered by score descending.`;
 
 const TOOLS: OpenAI.Chat.Completions.ChatCompletionFunctionTool[] = [

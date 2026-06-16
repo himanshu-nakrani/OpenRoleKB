@@ -12,7 +12,7 @@ vi.mock("@/lib/llm", () => ({
 }));
 vi.mock("@/lib/logger", () => ({ log: { warn: mockWarn, info: vi.fn(), debug: vi.fn(), error: vi.fn() } }));
 
-import { sanitizeFilters, parseQuery } from "@/lib/parse-query";
+import { sanitizeFilters, parseQuery, expandExcludeSynonyms } from "@/lib/parse-query";
 
 beforeEach(() => {
   mockCreate.mockReset();
@@ -186,5 +186,34 @@ describe("parseQuery fast-path", () => {
     const result = await parseQuery("dev");
     expect(result.filters).toEqual({ role: "dev" });
     expect(result.tokens).toBe(0);
+  });
+});
+
+describe("expandExcludeSynonyms", () => {
+  it("expands crypto into its synonym set", () => {
+    const out = expandExcludeSynonyms(["crypto"]);
+    expect(out).toEqual(expect.arrayContaining(["crypto", "cryptocurrency", "blockchain", "web3", "defi"]));
+  });
+
+  it("passes unknown terms through untouched (lowercased)", () => {
+    expect(expandExcludeSynonyms(["GAMING"])).toEqual(["gaming"]);
+    expect(expandExcludeSynonyms(["consulting"])).toEqual(["consulting"]);
+  });
+
+  it("dedupes when seeds overlap", () => {
+    const out = expandExcludeSynonyms(["crypto", "web3"]);
+    expect(new Set(out).size).toBe(out.length);
+  });
+
+  it("drops empty/whitespace seeds", () => {
+    expect(expandExcludeSynonyms(["", "   ", "crypto"])).toEqual(
+      expect.arrayContaining(["crypto", "cryptocurrency"])
+    );
+    expect(expandExcludeSynonyms([""]).length).toBe(0);
+  });
+
+  it("wires through sanitizeFilters so applyExclusionFilter sees the expansion", () => {
+    const r = sanitizeFilters({ exclude: ["crypto"] });
+    expect(r.exclude).toEqual(expect.arrayContaining(["crypto", "cryptocurrency", "blockchain"]));
   });
 });

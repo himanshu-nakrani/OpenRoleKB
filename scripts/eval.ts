@@ -23,7 +23,7 @@ import { searchJobs } from "@/lib/exa";
 import { searchLocalJobs } from "@/lib/local-search";
 import { rerankWithMetrics } from "@/lib/rerank";
 import { filterResults } from "@/lib/retrieval-quality";
-import { LAYER_A_FALLBACK_THRESHOLD, LOCAL_SEARCH_MAX_RESULTS } from "@/lib/config";
+import { LAYER_A_FALLBACK_THRESHOLD, LOCAL_SEARCH_MAX_RESULTS, MIN_RERANK_SCORE } from "@/lib/config";
 import { dedupeSearchResults, applySeniorityFilter, applyExclusionFilter, applyRemoteFilter } from "@/app/api/search/route";
 import { prisma } from "@/lib/prisma";
 import { hasSnapshot, loadSnapshot, writeSnapshot } from "../test/eval/snapshot-cache";
@@ -92,7 +92,12 @@ async function executeOnce(c: GoldenCase): Promise<SingleRunOutput> {
   const r = DRY_RUN || CHEAP
     ? syntheticRerank(exa)
     : await rerankWithMetrics(c.query, exa);
+  // Mirror the production pipeline ordering in src/app/api/search/route.ts —
+  // floor first, then hard-constraint filters. The synthetic --dry-run scorer
+  // emits 0.4/0.8 buckets, so the floor would zero half the dry-run output;
+  // skip it in that mode to keep dry-run useful for harness tests.
   let items = r.items;
+  if (!DRY_RUN) items = items.filter((it) => it.score >= MIN_RERANK_SCORE);
   items = applySeniorityFilter(items, exa, parsed.filters);
   items = applyExclusionFilter(items, exa, parsed.filters);
   items = applyRemoteFilter(items, exa, parsed.filters);

@@ -239,7 +239,8 @@
     "name": "sde-2-flipkart-bangalore",
     "query": "sde 2 flipkart bangalore",
     "expectations": {
-      "topResultMinScore": 0.4
+      "topResultMinScore": 0.4,
+      "_note": "Asserts: when Flipkart postings exist in corpus, top SDE-2 hit clears the 0.4 floor. When no Flipkart posting is present, the floor correctly drops Meesho/Safe alternates to 0.2–0.3; production returns empty, which is the right behavior. Re-enable corpus ingestion of Flipkart to satisfy this expectation."
     }
   },
   {
@@ -364,6 +365,14 @@
         "n": 3,
         "minMeanRelevance": 0.35
       }
+    }
+  },
+  {
+    "name": "noncorpus-company-empty-state",
+    "query": "software engineer at Wayne Enterprises Gotham R&D division",
+    "expectations": {
+      "expectNoResults": true,
+      "_note": "Asserts: when the query pins a fictional company, the reranker should score every real candidate below the 0.4 floor and the response should be empty. Uses a recognizable-fictional name (Wayne Enterprises) rather than a randomized string so Exa's neural search doesn't fuzzy-match to phonetically-close real companies. If anyone ever literally ingests a Wayne Enterprises tenant, rename this case."
     }
   }
 ]

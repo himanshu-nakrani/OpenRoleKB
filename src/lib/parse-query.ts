@@ -31,6 +31,35 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionFunctionTool[] = [
   },
 ];
 
+// User-typed exclusions are category labels ("crypto"), but post bodies use
+// the category's synonyms ("cryptocurrency", "blockchain", "web3"). The
+// applyExclusionFilter regex is word-boundary literal, so without expansion
+// "no crypto" silently lets Binance / Coinbase listings through. Expand a
+// small, high-signal set of categories at parse time so the filter has the
+// matching surface it needs. Keep this list short — broad synonym expansion
+// would hurt precision on adjacent fintech/payments roles that are legitimate.
+const EXCLUDE_SYNONYMS: Record<string, string[]> = {
+  crypto: ["crypto", "cryptocurrency", "blockchain", "web3", "defi"],
+  blockchain: ["blockchain", "crypto", "cryptocurrency", "web3"],
+  web3: ["web3", "crypto", "blockchain"],
+  defi: ["defi", "crypto", "blockchain"],
+};
+
+export function expandExcludeSynonyms(seeds: string[]): string[] {
+  const out = new Set<string>();
+  for (const s of seeds) {
+    const norm = s.trim().toLowerCase();
+    if (!norm) continue;
+    const syns = EXCLUDE_SYNONYMS[norm];
+    if (syns) {
+      for (const v of syns) out.add(v);
+    } else {
+      out.add(norm);
+    }
+  }
+  return Array.from(out).slice(0, 30);
+}
+
 export function sanitizeFilters(raw: unknown): Filters {
   if (raw === null || typeof raw !== "object") return {};
   const f = raw as Record<string, unknown>;
@@ -44,7 +73,10 @@ export function sanitizeFilters(raw: unknown): Filters {
   if (typeof f.yearsExperience === "number" && Number.isFinite(f.yearsExperience) && f.yearsExperience >= 0) {
     out.yearsExperience = Math.min(Math.floor(f.yearsExperience), 80);
   }
-  if (Array.isArray(f.exclude)) out.exclude = f.exclude.filter((s): s is string => typeof s === "string").slice(0, 20);
+  if (Array.isArray(f.exclude)) {
+    const seeds = f.exclude.filter((s): s is string => typeof s === "string").slice(0, 20);
+    out.exclude = expandExcludeSynonyms(seeds);
+  }
   if (typeof f.freshnessDays === "number" && Number.isFinite(f.freshnessDays) && f.freshnessDays > 0) {
     out.freshnessDays = Math.min(Math.floor(f.freshnessDays), 365);
   }

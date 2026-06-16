@@ -4,16 +4,22 @@ import { EXA_NUM_RESULTS } from "@/lib/config";
 import { filterResults, type FilterReport } from "@/lib/retrieval-quality";
 import { countryCodeForLocation } from "@/lib/city-synonyms";
 
+// Exa includeDomains matches the listed domain AND all subdomains. Pin the
+// jobs subdomain where one exists, otherwise leave the root so per-tenant
+// subdomains (company.bamboohr.com, company.teamtailor.com, …) still match.
+// Root-domain entries like "ashbyhq.com" also surface marketing pages on
+// www.ashbyhq.com, which then burn the entire result budget — see the
+// senior-react-remote eval case for the regression that motivated this.
 const ATS_DOMAINS = [
-  "greenhouse.io",
-  "lever.co",
-  "ashbyhq.com",
-  "workable.com",
+  "boards.greenhouse.io",
+  "jobs.lever.co",
+  "jobs.ashbyhq.com",
+  "apply.workable.com",
   "myworkdayjobs.com",
-  "smartrecruiters.com",
+  "jobs.smartrecruiters.com",
   "bamboohr.com",
   "recruitee.com",
-  "personio.de",
+  "jobs.personio.de",
   "teamtailor.com",
 ];
 
@@ -32,7 +38,22 @@ function getExa(): Exa {
 
 function getUserLocation(filters: Filters): string | undefined {
   if (filters.remote === true && !filters.location) return undefined;
+  // Region-hint locations ("EU timezone", "EMEA") aren't real places — don't
+  // fall back to "US" for them when the user is remote; that mis-biases recall.
+  if (filters.location && isRegionHint(filters.location)) {
+    return filters.remote === true ? undefined : "US";
+  }
   return countryCodeForLocation(filters.location) ?? "US";
+}
+
+// Phrases like "EU timezone", "EMEA", "US east coast" parse into filters.location
+// but aren't places Exa neural search can satisfy with `in <X>`. Including them
+// collapses recall to zero. Treat them as remote-region hints instead: drop from
+// the `in ...` clause and let `remote-friendly` + rerank carry the regional bias.
+const REGION_HINT_RX = /timezone|emea|apac|latam|americas|\b(?:eu|us|uk|na)\s+(?:east|west|central)\b/i;
+
+function isRegionHint(location: string): boolean {
+  return REGION_HINT_RX.test(location);
 }
 
 function buildQueryString(filters: Filters): string {
@@ -42,7 +63,7 @@ function buildQueryString(filters: Filters): string {
   if (filters.seniority) parts.push(filters.seniority);
   if (filters.role) parts.push(filters.role);
   if (filters.skills?.length) parts.push(filters.skills.join(", "));
-  if (filters.location) parts.push(`in ${filters.location}`);
+  if (filters.location && !isRegionHint(filters.location)) parts.push(`in ${filters.location}`);
   if (filters.remote) parts.push("remote-friendly");
   parts.push("job posting hiring");
 
@@ -56,7 +77,7 @@ function buildQueryString(filters: Filters): string {
   return q;
 }
 
-export const __test__ = { buildQueryString, getUserLocation };
+export const __test__ = { buildQueryString, getUserLocation, isRegionHint };
 
 export async function searchJobsWithReport(
   query: string,
