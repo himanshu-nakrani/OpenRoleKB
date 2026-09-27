@@ -29,7 +29,7 @@
     "@auth/prisma-adapter": "^2.11.2",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
-    "@sentry/nextjs": "^10.55.0",
+    "@sentry/nextjs": "^10.59.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "@vercel/analytics": "^2.0.1",
@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@testcontainers/postgresql": "^12.0.1",
+    "@testcontainers/postgresql": "^12.0.2",
     "@types/node": "^25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -55,7 +55,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
-    "testcontainers": "^12.0.1",
+    "testcontainers": "^12.0.2",
     "tsx": "^4.22.4",
     "typescript": "^5",
     "vitest": "^4.1.8"
